@@ -16,10 +16,10 @@ def main():
 
         try:
             # Initial input to the graph
-            result = graph.invoke({"input": user_input})
+            result = graph.invoke({"user_input": user_input})
 
             # Final output message from routed agent
-            content = result.get("content", "No content generated.")
+            content = result.get("response_message", "Sorry , I can not help you with that.")
 
             print(f"\nAssistant: {content}")
             logger.info(f"Input: {user_input}")

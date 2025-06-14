@@ -1,56 +1,91 @@
+import os
 import pprint
 from dotenv import load_dotenv
-import os
 from langchain_groq import ChatGroq
-from Backend.prompts.details_prompt import details_prompt
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_core.messages import ToolMessage, AIMessage
 from langgraph.prebuilt import create_react_agent
+from Backend.prompts.details_prompt import details_prompt
 from Backend.Tools.detailsagents_tools.about_us import about_us_tool
 from Backend.Tools.detailsagents_tools.availability import check_availability_tool
 from Backend.Tools.detailsagents_tools.retriever_tool import rag_tool
 from Backend.Tools.detailsagents_tools.get_price import get_price_tool
-from langsmith import traceable  # <-- Import LangSmith traceable decorator 
-from langchain_core.messages import ToolMessage, AIMessage
+from Backend.utils.logger import logger
+from typing import TypedDict, Literal
 
 load_dotenv()
 
+class DetailsAgentOutput(TypedDict):
+    response_message: str
 
 class DetailsAgent:
     def __init__(self):
-        # Initialize LLM agent
-        self.agent_llm = ChatGroq(
+        self.llm = ChatGroq(
             model_name=os.getenv("GROQ_MODEL_NAME"),
             temperature=0.2,
             groq_api_key=os.getenv("GROQ_API_KEY")
         )
 
-        llm_with_tools = self.agent_llm.bind_tools([rag_tool, about_us_tool, check_availability_tool , get_price_tool])
+        self.llm_with_tools = self.llm.bind_tools([
+            rag_tool, about_us_tool, check_availability_tool, get_price_tool
+        ])
 
-        # Initialize LangGraph agent
         self.agent_graph = create_react_agent(
-            llm_with_tools,
-            [rag_tool, about_us_tool, check_availability_tool , get_price_tool],
+            self.llm_with_tools,
+            [rag_tool, about_us_tool, check_availability_tool, get_price_tool],
             prompt=details_prompt
         )
 
-    @traceable(name="DetailsAgent Run")  # <-- Add traceable decorator here
-    def get_response(self, user_input: str) -> dict:
-        # Stream the agent graph and collect the last step
-        stream = self.agent_graph.stream({"messages": [{"role": "user", "content": user_input}]})
+    def get_response(self, user_input: str) -> DetailsAgentOutput:
+        try:
+            if not user_input or not user_input.strip():
+                return {"response_message": "You didn't say anything. Can I help with something?"}
 
-        response = None  # Initialize
-        for step in stream:
-            if isinstance(step, (ToolMessage, AIMessage)):
-                print("\n==== New step ====")
-                pprint.pprint(step)
-            response = step  # Save the last step (final AIMessage)
+            logger.debug(f"Running DetailsAgent for input: {user_input}")
+            
+            # Run agent with invoke and capture full message history
+            result = self.agent_graph.invoke({"messages": [{"role": "user", "content": user_input}]})
 
-        return self.postprocess(response)
+            print("\n==== Full message trace ====")
+            for msg in result["messages"]:
+                pprint.pprint(msg)
 
-    def postprocess(self, output):
-        return {
-            "role": "assistant",
-            "content": output.content if hasattr(output, "content") else str(output),
-            "agent": "details_agent"
-        }
+            # Extract final AI response
+            last_msg = next(
+                (m for m in reversed(result["messages"]) if isinstance(m, AIMessage) and m.content.strip()),
+                None
+            )
+
+            if last_msg:
+                return {"response_message": last_msg.content}
+            else:
+                logger.warning("No final AIMessage with content found.")
+                return {"response_message": "I wasn't able to find a helpful answer for that."}
+
+        except Exception as e:
+            import traceback
+            logger.error("Error in DetailsAgent:\n" + traceback.format_exc())
+            return {"response_message": "Something went wrong. Please try again later."}
+        #     stream = self.agent_graph.stream({"messages": [{"role": "user", "content": user_input}]})
+
+        #     final_message = None
+
+        #     for step in stream:
+        #         print("\n==== New step ====")
+        #         pprint.pprint(step)
+
+        #         if isinstance(step, (ToolMessage, AIMessage)):
+        #             final_message = step  # Save last AIMessage for return
+
+        #     if isinstance(final_message, AIMessage):
+        #         return {"response_message":final_message.content}
+
+        #     logger.warning("No AIMessage found in response stream.")
+        #     return {"response_message":"I couldn't find a clear answer for that."}
+
+        # except Exception as e:
+        #     import traceback
+        #     logger.error("DetailsAgent error:\n" + traceback.format_exc())
+        #     return {"response_message":"Something went wrong while answering your question."}
+
+    def __call__(self, user_input: str) -> DetailsAgentOutput:
+        return self.get_response(user_input)

@@ -38,28 +38,11 @@ Always be helpful and professional while maintaining the personality of a friend
 ```json
 {{"product_names": ["Product 1", "Product 2", ...]}}
 ```
-. The tool will return a JSON object with the price of each product. Use this tool only if the user specifically asks for the price of one or more products and the information is not already available in the context. After using this tool, present the prices clearly and DO NOT call the tool again for the same query.
+. The tool will return a JSON object with the price of each product. Only call this tool after confirming the products are available via the CheckAvailabilityTool. Do not use this tool for unavailable products.
 
 **Multi-item query handling guidance:**
 
 When responding to queries about multiple items, always list each item separately with clear availability and price information if applicable. Use check marks or cross marks to indicate availability and clearly state prices with currency symbols.
-
-**Example:**
-
-User: "Can you tell me if samosa and latte are available, and their prices?"
-
-Response:
-Sure! Here's what I found for you:
-
-1. **Latte**
-   - ✅ Available
-   - 💰 Price: ₹120
-
-2. **Samosa**
-   - ❌ Not Available
-   - ℹ️ Sorry, samosa is currently not on our menu.
-
-Let me know if you'd like suggestions for other delicious snacks!
 """),
     ("placeholder", "{messages}")
 ])

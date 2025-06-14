@@ -1,66 +1,60 @@
 import os
-from copy import deepcopy
 from dotenv import load_dotenv
-from langchain.prompts import ChatPromptTemplate
 from langchain.output_parsers import PydanticOutputParser
 from langchain_groq import ChatGroq
 from Backend.utils.logger import logger
-
-from Backend.pydantic_schemas.agents_schemas import AgentDecision  # Ensure path is correct
+from Backend.pydantic_schemas.agents_schemas import AgentDecision
 from Backend.prompts.classification_prompt import classification_prompt
+from typing import TypedDict, Literal
 
 # Load environment variables
 load_dotenv()
 
+class ClassificationAgentOutput(TypedDict):
+    target_agent: str
+    response_message: str
+    chain_of_thought: str
+
 class ClassificationAgent:
+    """ClassificationAgent classifies the user input into coffee shop-related tasks."""
+
     def __init__(self):
-        # Set up the model client
         self.client = ChatGroq(
             model_name=os.getenv("GROQ_MODEL_NAME"),
             temperature=0,
             groq_api_key=os.getenv("GROQ_API_KEY")
         )
 
-        # Classification prompt
         self.prompt = classification_prompt
-
-        # Output parser
         self.output_parser = PydanticOutputParser(pydantic_object=AgentDecision)
 
-        # ✅ Build chain correctly
         self.chain = (
             self.prompt
             | self.client
             | self.output_parser
         )
 
-    def get_response(self, messages: list[dict]):
-        # Use recent messages for context
-        messages = deepcopy(messages)
-        recent_messages = messages[-3:]
-        input_text = "\n".join([f"{msg['role']}: {msg['content']}" for msg in recent_messages])
+        logger.info("ClassificationAgent initialized")
 
-        # Run the chain and return postprocessed output
-        chain_output = self.chain.invoke({"input": input_text})
-        logger.info(f"Input: {input_text}")
-        logger.info(f"Decision: {chain_output}")
-        return self.postprocess(chain_output)
-
-    def postprocess(self, output):
-        if isinstance(output, AgentDecision):
-            decision = output.decision
-            message = output.message
-        else:
-            decision = output['decision']
-            message = output.get('message', '')
-
-        return {
-            "role": "assistant",
-            "content": message,
-            "agent": "classification_agent",
-            "classification_output": {
-                "classification_decision": decision,
-                "chain_of_thought": output.chain_of_thought
+    def get_response(self, user_input: str) -> ClassificationAgentOutput:
+        try:
+            logger.debug(f"Invoking classification chain with input: {user_input}")
+            result = self.chain.invoke({"user_input": user_input})
+            logger.debug(f"Classification result: {result}")
+            return {
+                "target_agent": result.target_agent,
+                "response_message": result.response_message or "Got it. What would you like to know next?",
+                "chain_of_thought": result.chain_of_thought
             }
-        }
-    
+
+        except Exception as e:
+            import traceback
+            logger.error("ClassificationAgent error:\n" + traceback.format_exc())
+            return {
+                "target_agent": "unknown",
+                "response_message": "Something went wrong while classifying. Please try again.",
+                "chain_of_thought": "Error during classification"
+            }
+
+    def __call__(self, user_input: str) -> ClassificationAgentOutput:
+        return self.get_response(user_input)

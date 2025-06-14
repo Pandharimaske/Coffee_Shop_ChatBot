@@ -28,7 +28,7 @@ class GuardDecision(BaseModel):
     """Schema for guard agent's output determining query access."""
     chain_of_thought: str = Field(description="Reasoning about whether the query is allowed")
     decision: GuardDecisionType = Field(..., description="Decision: allowed or not allowed")
-    message: Optional[str] = Field(
+    response_message: Optional[str] = Field(
         default="", 
         description="Message shown to the user. 'Sorry, I can’t help you with that.' if not allowed; empty if allowed."
     )
@@ -37,8 +37,8 @@ class GuardDecision(BaseModel):
 class AgentDecision(BaseModel):
     """Schema for routing the query to the appropriate agent."""
     chain_of_thought: str = Field(description="Reasoning about which agent should handle the input")
-    decision: AgentType = Field(..., description="The chosen agent to handle the input")
-    message: Optional[str] = Field(default="", description="Optional response message to the user")
+    target_agent: AgentType = Field(..., description="The chosen agent to handle the input")
+    response_message: Optional[str] = Field(default="", description="Optional response message to the user")
 
 
 class RecommendationType(BaseModel):

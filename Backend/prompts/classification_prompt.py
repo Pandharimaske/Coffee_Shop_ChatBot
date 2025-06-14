@@ -24,9 +24,9 @@ Your task is to decide which agent should handle the user's query. There are **t
 Respond in this JSON format:
 {{
   "chain_of_thought": "...",
-  "decision": "details_agent" | "order_taking_agent" | "recommendation_agent",
-  "message": "..."
+  "target_agent": "details_agent" | "order_taking_agent" | "recommendation_agent",
+  "reponse_message": "..."
 }}
 """),
-    ("human", "{input}")
+    ("human", "{user_input}")
 ])
