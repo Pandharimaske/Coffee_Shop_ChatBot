@@ -2,7 +2,7 @@ from langchain.prompts import PromptTemplate
 from langchain.output_parsers import PydanticOutputParser
 from langchain_core.runnables import RunnableSequence
 from Backend.utils.logger import logger
-from Backend.utils.util import llm
+from Backend.utils.util import load_llm
 from Backend.Tools.detailsagents_tools.retriever_tool import vectorstore
 from Backend.schemas.state_schema import OrderInput , OrderTakingAgentState
 from Backend.prompts.order_taking_prompt import parse_prompt
@@ -10,7 +10,7 @@ from Backend.prompts.order_taking_prompt import parse_prompt
 # ---- Agent Class ----
 class OrderTakingAgent:
     def __init__(self):
-        self.llm = llm
+        self.llm = load_llm()
         
         self.parser = PydanticOutputParser(pydantic_object=OrderInput)
 

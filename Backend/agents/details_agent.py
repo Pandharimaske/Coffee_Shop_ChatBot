@@ -7,12 +7,12 @@ from Backend.Tools.detailsagents_tools.availability import check_availability_to
 from Backend.Tools.detailsagents_tools.retriever_tool import rag_tool
 from Backend.Tools.detailsagents_tools.get_price import get_price_tool
 from Backend.utils.logger import logger
-from Backend.utils.util import llm
+from Backend.utils.util import load_llm
 from Backend.schemas.state_schema import DetailsAgentState
 
 class DetailsAgent:
     def __init__(self):
-        self.llm = llm
+        self.llm = load_llm()
 
         self.llm_with_tools = self.llm.bind_tools([
             rag_tool, about_us_tool, check_availability_tool, get_price_tool

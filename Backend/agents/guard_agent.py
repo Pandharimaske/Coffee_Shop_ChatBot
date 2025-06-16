@@ -1,14 +1,14 @@
 from Backend.schemas.agents_schemas import GuardDecision
 from Backend.prompts.gaurd_prompt import guard_prompt
 from Backend.utils.logger import logger
-from Backend.utils.util import llm
+from Backend.utils.util import load_llm
 from Backend.schemas.state_schema import GuardAgentState
 
 class GuardAgent:
     """GuardAgent checks whether a user's query is within the allowed domain for a coffee shop assistant."""
 
     def __init__(self):
-        llm = llm
+        llm = load_llm()
 
         self.chain = guard_prompt | llm.with_structured_output(GuardDecision)
         logger.info("GuardAgent initialized")

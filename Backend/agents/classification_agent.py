@@ -1,6 +1,6 @@
 from langchain.output_parsers import PydanticOutputParser
 from Backend.utils.logger import logger
-from Backend.utils.util import llm
+from Backend.utils.util import load_llm
 from Backend.schemas.agents_schemas import AgentDecision
 from Backend.prompts.classification_prompt import classification_prompt
 from Backend.schemas.state_schema import ClassificationAgentState
@@ -10,7 +10,7 @@ class ClassificationAgent:
     """ClassificationAgent classifies the user input into coffee shop-related tasks."""
 
     def __init__(self):
-        self.llm = llm
+        self.llm = load_llm()
 
         self.prompt = classification_prompt
         self.output_parser = PydanticOutputParser(pydantic_object=AgentDecision)
