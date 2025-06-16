@@ -1,7 +1,4 @@
-import os
 import pprint
-from dotenv import load_dotenv
-from langchain_groq import ChatGroq
 from langchain_core.messages import ToolMessage, AIMessage
 from langgraph.prebuilt import create_react_agent
 from Backend.prompts.details_prompt import details_prompt
@@ -10,20 +7,12 @@ from Backend.Tools.detailsagents_tools.availability import check_availability_to
 from Backend.Tools.detailsagents_tools.retriever_tool import rag_tool
 from Backend.Tools.detailsagents_tools.get_price import get_price_tool
 from Backend.utils.logger import logger
-from typing import TypedDict, Literal
-
-load_dotenv()
-
-class DetailsAgentOutput(TypedDict):
-    response_message: str
+from Backend.utils.util import llm
+from Backend.schemas.state_schema import DetailsAgentState
 
 class DetailsAgent:
     def __init__(self):
-        self.llm = ChatGroq(
-            model_name=os.getenv("GROQ_MODEL_NAME"),
-            temperature=0.2,
-            groq_api_key=os.getenv("GROQ_API_KEY")
-        )
+        self.llm = llm
 
         self.llm_with_tools = self.llm.bind_tools([
             rag_tool, about_us_tool, check_availability_tool, get_price_tool
@@ -35,7 +24,7 @@ class DetailsAgent:
             prompt=details_prompt
         )
 
-    def get_response(self, user_input: str) -> DetailsAgentOutput:
+    def get_response(self, user_input: str) -> DetailsAgentState:
         try:
             if not user_input or not user_input.strip():
                 return {"response_message": "You didn't say anything. Can I help with something?"}
@@ -87,5 +76,5 @@ class DetailsAgent:
         #     logger.error("DetailsAgent error:\n" + traceback.format_exc())
         #     return {"response_message":"Something went wrong while answering your question."}
 
-    def __call__(self, user_input: str) -> DetailsAgentOutput:
+    def __call__(self, user_input: str) -> DetailsAgentState:
         return self.get_response(user_input)

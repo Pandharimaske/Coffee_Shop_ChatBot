@@ -1,42 +1,29 @@
-import os
-from dotenv import load_dotenv
 from langchain.output_parsers import PydanticOutputParser
-from langchain_groq import ChatGroq
 from Backend.utils.logger import logger
+from Backend.utils.util import llm
 from Backend.schemas.agents_schemas import AgentDecision
 from Backend.prompts.classification_prompt import classification_prompt
-from typing import TypedDict, Literal
+from Backend.schemas.state_schema import ClassificationAgentState
 
-# Load environment variables
-load_dotenv()
-
-class ClassificationAgentOutput(TypedDict):
-    target_agent: str
-    response_message: str
-    chain_of_thought: str
 
 class ClassificationAgent:
     """ClassificationAgent classifies the user input into coffee shop-related tasks."""
 
     def __init__(self):
-        self.client = ChatGroq(
-            model_name=os.getenv("GROQ_MODEL_NAME"),
-            temperature=0,
-            groq_api_key=os.getenv("GROQ_API_KEY")
-        )
+        self.llm = llm
 
         self.prompt = classification_prompt
         self.output_parser = PydanticOutputParser(pydantic_object=AgentDecision)
 
         self.chain = (
             self.prompt
-            | self.client
+            | self.llm
             | self.output_parser
         )
 
         logger.info("ClassificationAgent initialized")
 
-    def get_response(self, user_input: str) -> ClassificationAgentOutput:
+    def get_response(self, user_input: str) -> ClassificationAgentState:
         try:
             logger.debug(f"Invoking classification chain with input: {user_input}")
             result = self.chain.invoke({"user_input": user_input})
@@ -56,5 +43,5 @@ class ClassificationAgent:
                 "chain_of_thought": "Error during classification"
             }
 
-    def __call__(self, user_input: str) -> ClassificationAgentOutput:
+    def __call__(self, user_input: str) -> ClassificationAgentState:
         return self.get_response(user_input)

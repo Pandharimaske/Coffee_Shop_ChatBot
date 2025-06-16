@@ -1,32 +1,19 @@
-import os
-from dotenv import load_dotenv
-from langchain_groq import ChatGroq
 from Backend.schemas.agents_schemas import GuardDecision
 from Backend.prompts.gaurd_prompt import guard_prompt
 from Backend.utils.logger import logger
-from typing import TypedDict, Literal
-
-load_dotenv()
-
-class GuardAgentOutput(TypedDict):
-    decision: Literal["allowed", "not allowed"]
-    response_message: str
-    chain_of_thought: str
+from Backend.utils.util import llm
+from Backend.schemas.state_schema import GuardAgentState
 
 class GuardAgent:
     """GuardAgent checks whether a user's query is within the allowed domain for a coffee shop assistant."""
 
     def __init__(self):
-        llm = ChatGroq(
-            model_name=os.getenv("GROQ_MODEL_NAME"),
-            temperature=0,
-            groq_api_key=os.getenv("GROQ_API_KEY")
-        )
+        llm = llm
 
         self.chain = guard_prompt | llm.with_structured_output(GuardDecision)
         logger.info("GuardAgent initialized")
 
-    def get_response(self, user_input: str) -> GuardAgentOutput:
+    def get_response(self, user_input: str) -> GuardAgentState:
         try:
             logger.debug(f"Invoking guard chain with input: {user_input}")
             if not user_input or not user_input.strip():
@@ -50,5 +37,5 @@ class GuardAgent:
                 "chain_of_thought": "Error during processing"
             }
 
-    def __call__(self, user_input: str) -> GuardAgentOutput:
+    def __call__(self, user_input: str) -> GuardAgentState:
         return self.get_response(user_input)

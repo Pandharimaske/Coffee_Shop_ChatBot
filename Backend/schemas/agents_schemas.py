@@ -23,7 +23,6 @@ class RecommendationTypeEnum(str, Enum):
 
 
 # ---------------- Schemas ---------------- #
-
 class GuardDecision(BaseModel):
     """Schema for guard agent's output determining query access."""
     chain_of_thought: str = Field(description="Reasoning about whether the query is allowed")

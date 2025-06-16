@@ -1,25 +1,17 @@
-import os
-from dotenv import load_dotenv
-from langchain_groq import ChatGroq
 from langchain.prompts import PromptTemplate
 from langchain.output_parsers import PydanticOutputParser
 from langchain_core.runnables import RunnableSequence
 from Backend.utils.logger import logger
+from Backend.utils.util import llm
 from Backend.Tools.detailsagents_tools.retriever_tool import vectorstore
-from Backend.schemas.ordertakingagent_schema import OrderInput , OrderTakingAgentState
+from Backend.schemas.state_schema import OrderInput , OrderTakingAgentState
 from Backend.prompts.order_taking_prompt import parse_prompt
-
-
-load_dotenv()
 
 # ---- Agent Class ----
 class OrderTakingAgent:
     def __init__(self):
-        self.llm = ChatGroq(
-            model_name=os.getenv("GROQ_MODEL_NAME"),
-            temperature=0,
-            groq_api_key=os.getenv("GROQ_API_KEY")
-        )
+        self.llm = llm
+        
         self.parser = PydanticOutputParser(pydantic_object=OrderInput)
 
         self.parse_prompt = parse_prompt
