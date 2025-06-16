@@ -10,7 +10,6 @@ class DetailsAgentNode(Runnable):
         user_input = state["user_input"]
         if not user_input:
             return {
-                "user_input": user_input,
                 "response_message": "Sorry, I didn't receive any input."
             }
 

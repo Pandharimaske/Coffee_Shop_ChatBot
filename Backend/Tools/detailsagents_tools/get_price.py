@@ -56,7 +56,6 @@ get_price_tool = Tool.from_function(
             ⚠️ Only use this tool if:
             - The product has already been verified as available using the CheckAvailabilityTool.
             - Do NOT call this tool directly if availability is unknown.
-
             If availability hasn’t been checked, call CheckAvailabilityTool first.
             """,
     args_schema=PriceCheckInput
