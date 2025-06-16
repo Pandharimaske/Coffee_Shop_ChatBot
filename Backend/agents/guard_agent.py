@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 from langchain_groq import ChatGroq
-from Backend.pydantic_schemas.agents_schemas import GuardDecision
+from Backend.schemas.agents_schemas import GuardDecision
 from Backend.prompts.gaurd_prompt import guard_prompt
 from Backend.utils.logger import logger
 from typing import TypedDict, Literal

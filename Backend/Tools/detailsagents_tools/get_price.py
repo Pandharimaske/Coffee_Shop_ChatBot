@@ -1,6 +1,6 @@
 from langchain.tools import Tool
 from Backend.Tools.detailsagents_tools.retriever_tool import vectorstore
-from Backend.pydantic_schemas.detailsagent_tools_schemas import ProductPriceInfo, ProductPriceListOutput , PriceCheckInput
+from Backend.schemas.detailsagent_tools_schemas import ProductPriceInfo, ProductPriceListOutput , PriceCheckInput
 
 def get_price_func(product_names: PriceCheckInput) -> ProductPriceListOutput:
     product_info_list = []

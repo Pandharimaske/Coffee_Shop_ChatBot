@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 from langchain.output_parsers import PydanticOutputParser
 from langchain_groq import ChatGroq
 from Backend.utils.logger import logger
-from Backend.pydantic_schemas.agents_schemas import AgentDecision
+from Backend.schemas.agents_schemas import AgentDecision
 from Backend.prompts.classification_prompt import classification_prompt
 from typing import TypedDict, Literal
 

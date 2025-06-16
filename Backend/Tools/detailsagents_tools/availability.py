@@ -1,5 +1,5 @@
 from langchain.tools import Tool
-from Backend.pydantic_schemas.detailsagent_tools_schemas import AvailabilityInput, PriceCheckInput
+from Backend.schemas.detailsagent_tools_schemas import AvailabilityInput, PriceCheckInput
 from Backend.Tools.detailsagents_tools.retriever_tool import vectorstore
 
 def check_availability_func(product_names: AvailabilityInput) -> PriceCheckInput:

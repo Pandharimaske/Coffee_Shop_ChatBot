@@ -6,7 +6,7 @@ from langchain.output_parsers import PydanticOutputParser
 from langchain_core.runnables import RunnableSequence
 from Backend.utils.logger import logger
 from Backend.Tools.detailsagents_tools.retriever_tool import vectorstore
-from Backend.pydantic_schemas.ordertakingagent_schema import OrderInput , OrderTakingAgentState
+from Backend.schemas.ordertakingagent_schema import OrderInput , OrderTakingAgentState
 from Backend.prompts.order_taking_prompt import parse_prompt
 
 

@@ -7,7 +7,7 @@ from Backend.rag_pipeline import CoffeeShopRAGPipeline
 from langchain_pinecone import PineconeVectorStore
 from langchain_huggingface import HuggingFaceEmbeddings
 from pinecone import Pinecone, ServerlessSpec
-from Backend.pydantic_schemas.detailsagent_tools_schemas import ProductQueryInput
+from Backend.schemas.detailsagent_tools_schemas import ProductQueryInput
 
 # Setup embedding + vectorstore + pipeline once
 embedding_model = HuggingFaceEmbeddings(model_name="BAAI/bge-base-en-v1.5")
