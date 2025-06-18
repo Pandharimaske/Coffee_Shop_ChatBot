@@ -6,12 +6,6 @@ class ProductItem(TypedDict):
     per_unit_price: Optional[float]
     total_price: Optional[float]
 
-class InputState(TypedDict):
-    user_input: str
-
-class OutputState(TypedDict):
-    response_message: str
-
 class CoffeeAgentState(TypedDict):
     user_name:str = "Pandhari"
     user_input: str
