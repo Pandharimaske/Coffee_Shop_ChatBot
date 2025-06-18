@@ -1,5 +1,4 @@
 # 📁 Backend/graph/coffee_shop_graph.py
-
 from langgraph.graph import StateGraph, END, START
 from Backend.nodes.gaurd_node import GuardNode
 from Backend.nodes.classification_node import ClassificationNode
@@ -7,11 +6,12 @@ from Backend.nodes.details_node import DetailsAgentNode
 from Backend.nodes.order_node import OrderAgentNode
 from Backend.nodes.recommendation_node import RecommendationAgentNode
 from Backend.agents.reccomendation_agent import RecommendationAgent
-from Backend.graph.states import InputState, OutputState, CoffeeAgentState
+from Backend.nodes.update_order_node import UpdateOrderAgentNode
+from Backend.graph.states import CoffeeAgentState
 
 def build_coffee_shop_graph():
     # ✅ Use structured state
-    builder = StateGraph(CoffeeAgentState, input=InputState, output=OutputState)
+    builder = StateGraph(CoffeeAgentState, input=CoffeeAgentState, output=CoffeeAgentState)
 
     # Step 1: Guard agent
     builder.add_node("guard", GuardNode())
@@ -21,7 +21,8 @@ def build_coffee_shop_graph():
 
     # Step 3: Downstream agent nodes
     builder.add_node("details", DetailsAgentNode())
-    builder.add_node("order_taking", OrderAgentNode())
+    builder.add_node("take_order", OrderAgentNode())
+    builder.add_node("update_order", UpdateOrderAgentNode())
 
     recommendation_agent = RecommendationAgent(
         apriori_recommendation_path="/Users/pandhari/Coffee_Shop_ChatBot/Backend/Data/apriori_recommendations.json",
@@ -47,13 +48,15 @@ def build_coffee_shop_graph():
 
     builder.add_conditional_edges("classify", classify_router, {
         "details_agent": "details",
-        "order_taking_agent": "order_taking",
-        "recommendation_agent": "recommend"
+        "order_taking_agent": "take_order",
+        "recommendation_agent": "recommend" , 
+        "update_order_agent":"update_order"
     })
 
     # Final responses
     builder.add_edge("details", END)
-    builder.add_edge("order_taking", END)
+    builder.add_edge("take_order", END)
     builder.add_edge("recommend", END)
+    builder.add_edge("update_order", END)
 
     return builder.compile()

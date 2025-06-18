@@ -24,8 +24,7 @@ class GuardAgent:
 
             return {
                 "decision": result.decision,
-                "response_message": result.response_message or "I understand. How can I help you with your order?",
-                "chain_of_thought": result.chain_of_thought
+                "response_message": result.response_message or "I understand. How can I help you with your order?"
             }
 
         except Exception as e:
@@ -34,7 +33,6 @@ class GuardAgent:
             return {
                 "decision": "not allowed",
                 "response_message": "Something went wrong. Can I help you with something else?",
-                "chain_of_thought": "Error during processing"
             }
 
     def __call__(self, user_input: str) -> GuardAgentState:

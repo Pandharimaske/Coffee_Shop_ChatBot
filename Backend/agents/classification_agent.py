@@ -31,7 +31,6 @@ class ClassificationAgent:
             return {
                 "target_agent": result.target_agent,
                 "response_message": result.response_message or "Got it. What would you like to know next?",
-                "chain_of_thought": result.chain_of_thought
             }
 
         except Exception as e:
@@ -40,7 +39,6 @@ class ClassificationAgent:
             return {
                 "target_agent": "unknown",
                 "response_message": "Something went wrong while classifying. Please try again.",
-                "chain_of_thought": "Error during classification"
             }
 
     def __call__(self, user_input: str) -> ClassificationAgentState:

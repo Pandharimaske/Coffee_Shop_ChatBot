@@ -4,7 +4,7 @@ import os
 import json
 import re
 from langchain_core.prompts import PromptTemplate
-from langchain_groq import ChatGroq
+from Backend.utils.util import load_llm
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_pinecone import PineconeVectorStore
 from pydantic import BaseModel, Field, validator
@@ -40,16 +40,12 @@ class QueryFilters(BaseModel):
 # ---- Main Pipeline Class ----
 
 class CoffeeShopRAGPipeline:
-    def __init__(self, vectorstore, groq_api_key, reranker=None):
+    def __init__(self, vectorstore, reranker=None):
         self.vectorstore = vectorstore
         self.reranker = reranker
 
         # Setup LLM for filter extraction
-        self.llm_filter_extractor = ChatGroq(
-            groq_api_key=groq_api_key,
-            model_name="llama3-70b-8192",
-            temperature=0.0
-        )
+        self.llm_filter_extractor = load_llm()
 
         self.filter_prompt_template = PromptTemplate.from_template("""
 You are a helpful assistant that extracts *structured filter parameters* from a user's natural language query about coffee shop products.

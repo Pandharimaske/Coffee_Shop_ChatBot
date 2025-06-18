@@ -9,10 +9,9 @@ class DetailsAgentNode(Runnable):
     def invoke(self, state: CoffeeAgentState, config=None) -> CoffeeAgentState:
         user_input = state["user_input"]
         if not user_input:
-            return {
-                "response_message": "Sorry, I didn't receive any input."
-            }
-
+            state["response_message"] = "Sorry, I didn't receive any input."
+            return CoffeeAgentState(**state)
+        
         response = self.agent.get_response(user_input)
         state["response_message"] = response["response_message"]
         return CoffeeAgentState(**state)

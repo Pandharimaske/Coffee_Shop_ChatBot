@@ -13,7 +13,8 @@ class OrderAgentNode(Runnable):
             return CoffeeAgentState(**state)
 
         response = self.agent.get_response(user_input)
-        state["response_message"] = response["response_message"]
         state["order"] = response["order"]
+        state["response_message"] = response["response_message"]
+        state["final_price"] = response["final_price"]
+
         return CoffeeAgentState(**state)
-    

@@ -29,7 +29,6 @@ vectorstore = PineconeVectorStore(
 )
 
 rag_pipeline = CoffeeShopRAGPipeline(
-    groq_api_key=os.getenv("GROQ_API_KEY"),
     vectorstore=vectorstore
 )
 

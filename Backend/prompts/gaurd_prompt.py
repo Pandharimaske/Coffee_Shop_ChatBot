@@ -21,7 +21,6 @@ Your task is to determine whether the user's query is relevant to the coffee sho
 
 Respond strictly in this JSON format:
 {{
-  "chain_of_thought": "...",  
   "decision": "allowed" or "not allowed",  
   "response_message": "..."  // Leave empty if allowed; otherwise, provide a short polite refusal
 }}"""),

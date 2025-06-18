@@ -5,6 +5,8 @@ from Backend.utils.logger import logger
 from Backend.utils.util import load_llm
 from Backend.Tools.detailsagents_tools.retriever_tool import vectorstore
 from Backend.schemas.state_schema import OrderInput , OrderTakingAgentState
+from Backend.graph.states import ProductItem
+from typing import List
 from Backend.prompts.order_taking_prompt import parse_prompt
 
 # ---- Agent Class ----
@@ -28,9 +30,9 @@ class OrderTakingAgent:
     def parse_user_input(self, user_input: str) -> OrderInput:
         return self.llm_parser_chain.invoke({"user_input": user_input})
 
-    def process_order(self, order: OrderInput) -> tuple[str, OrderInput]:
+    def process_order(self, order: OrderInput) -> tuple[str, list[ProductItem] , float]:
         items = order.items
-        available_items = []
+        available_items: List[ProductItem] = []
         unavailable_items = []
         total = 0
         summary_lines = []
@@ -47,7 +49,12 @@ class OrderTakingAgent:
                 doc = results[0]
                 price = doc.metadata.get("price", 0.0)
                 line_total = item.quantity * price
-                available_items.append(item)
+                available_items.append({
+                    "name": item.name,
+                    "quantity": item.quantity,
+                    "per_unit_price": price,
+                    "total_price": line_total
+                })
                 total += line_total
                 summary_lines.append(f"✅ {name} x {item.quantity} @ ${price} = ${line_total}")
             else:
@@ -65,23 +72,25 @@ class OrderTakingAgent:
         else:
             summary += f"\n\nTotal: ${total}\nShall I place the order?"
 
-        return summary, OrderInput(items=available_items)
+        return summary, available_items , total
 
 
-    def get_response(self, user_input: str) -> OrderTakingAgentState:
+    def get_response(self, user_input: str) -> dict:
         try:
             logger.info(f"User input: {user_input}")
             parsed_order = self.parse_user_input(user_input)
             logger.info(f"Parsed order: {parsed_order}")
-            summary, filtered_order = self.process_order(parsed_order)
+            summary, filtered_order , total = self.process_order(parsed_order)
 
             return {
-                "order": filtered_order,  # ✅ only available items
-                "response_message": summary
+                "order": filtered_order,
+                "response_message": summary , 
+                "final_price": total
             }
         except Exception as e:
             logger.error(f"OrderAgent error: {e}")
             return {
-                "order": OrderInput(items=[]),
+                "order": [],
                 "response_message": "Sorry, I couldn’t process your order. Could you please rephrase it?",
+                "final_price": 0
             }
