@@ -7,8 +7,7 @@ class GuardNode(Runnable):
         self.agent = GuardAgent()
 
     def invoke(self, state: CoffeeAgentState, config=None) -> CoffeeAgentState:
-        user_input = state["user_input"]
-        result = self.agent(user_input)
+        result = self.agent(state)
 
         state["decision"] = result["decision"]
         state["response_message"] = result["response_message"]
