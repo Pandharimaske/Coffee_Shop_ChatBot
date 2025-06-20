@@ -21,7 +21,7 @@ def main():
         )
 
     while True:
-        print(f"\n📥 Current State (Before Input): {state}")
+        # print(f"\n📥 Current State (Before Input): {state}")
         user_input = input("\nYou: ")
         if user_input.lower() in ["exit", "quit"]:
             print("Goodbye! 👋")
@@ -33,7 +33,7 @@ def main():
 
             # ✅ Invoke graph and get updated state back
             state = graph.invoke(state)
-            print(f"\n📤 Updated State (After Graph): {state}")
+            # print(f"\n📤 Updated State (After Graph): {state}")
 
             # ✅ Extract and print the assistant’s response
             content = state["response_message"] or "Sorry, I can't help with that."

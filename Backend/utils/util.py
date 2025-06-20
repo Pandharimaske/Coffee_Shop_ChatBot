@@ -4,5 +4,5 @@ from langchain_groq import ChatGroq
 
 load_dotenv()
 
-def load_llm():
-    return ChatGroq(model=os.getenv("GROQ_MODEL_NAME"), temperature=0)
+def load_llm(temperature:float = 0):
+    return ChatGroq(model=os.getenv("GROQ_MODEL_NAME"), temperature=temperature)

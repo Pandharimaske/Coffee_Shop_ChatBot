@@ -12,7 +12,7 @@ from Backend.schemas.state_schema import DetailsAgentState
 
 class DetailsAgent:
     def __init__(self):
-        self.llm = load_llm()
+        self.llm = load_llm(temperature=0.3)
 
         self.llm_with_tools = self.llm.bind_tools([
             rag_tool, about_us_tool, check_availability_tool, get_price_tool
@@ -34,9 +34,9 @@ class DetailsAgent:
             # Run agent with invoke and capture full message history
             result = self.agent_graph.invoke({"messages": [{"role": "user", "content": user_input}]})
 
-            print("\n==== Full message trace ====")
-            for msg in result["messages"]:
-                pprint.pprint(msg)
+            # print("\n==== Full message trace ====")
+            # for msg in result["messages"]:
+            #     pprint.pprint(msg)
 
             # Extract final AI response
             last_msg = next(

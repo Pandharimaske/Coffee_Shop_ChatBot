@@ -7,6 +7,7 @@ from Backend.nodes.order_node import OrderAgentNode
 from Backend.nodes.recommendation_node import RecommendationAgentNode
 from Backend.agents.reccomendation_agent import RecommendationAgent
 from Backend.nodes.update_order_node import UpdateOrderAgentNode
+from Backend.nodes.response_node import ResponseNode
 from Backend.graph.states import CoffeeAgentState
 
 def build_coffee_shop_graph():
@@ -23,6 +24,7 @@ def build_coffee_shop_graph():
     builder.add_node("details", DetailsAgentNode())
     builder.add_node("take_order", OrderAgentNode())
     builder.add_node("update_order", UpdateOrderAgentNode())
+    builder.add_node("final_response" , ResponseNode())
 
     recommendation_agent = RecommendationAgent(
         apriori_recommendation_path="/Users/pandhari/Coffee_Shop_ChatBot/Backend/Data/apriori_recommendations.json",
@@ -35,11 +37,11 @@ def build_coffee_shop_graph():
 
     # Decision router after guard
     def guard_decision_router(state: CoffeeAgentState):
-        return "classify" if state.get("decision") == "allowed" else "end"
+        return "classify" if state.get("decision") == "allowed" else "final_response"
 
     builder.add_conditional_edges("guard", guard_decision_router, {
         "classify": "classify",
-        "end": END
+        "final_response": "final_response"
     })
 
     # Decision router after classification
@@ -54,9 +56,10 @@ def build_coffee_shop_graph():
     })
 
     # Final responses
-    builder.add_edge("details", END)
-    builder.add_edge("take_order", END)
-    builder.add_edge("recommend", END)
-    builder.add_edge("update_order", END)
+    builder.add_edge("details", "final_response")
+    builder.add_edge("take_order", "final_response")
+    builder.add_edge("recommend", "final_response")
+    builder.add_edge("update_order", "final_response")
+    builder.add_edge("final_response" , END)
 
     return builder.compile()
