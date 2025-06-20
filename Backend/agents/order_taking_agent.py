@@ -3,7 +3,7 @@ from langchain.output_parsers import PydanticOutputParser
 from langchain_core.runnables import RunnableSequence
 from Backend.utils.logger import logger
 from Backend.utils.util import load_llm
-from Backend.Tools.detailsagents_tools.retriever_tool import vectorstore
+from Backend.Tools.retriever_tool import vectorstore
 from Backend.schemas.state_schema import OrderInput , OrderTakingAgentState
 from Backend.graph.states import ProductItem
 from typing import List

@@ -6,7 +6,7 @@ from Backend.utils.util import load_llm
 from langchain.output_parsers import PydanticOutputParser
 from Backend.prompts.order_updates_prompt import update_order_prompt
 from langchain_core.runnables import RunnableSequence
-from Backend.Tools.detailsagents_tools.retriever_tool import vectorstore
+from Backend.Tools.retriever_tool import vectorstore
 
 
 

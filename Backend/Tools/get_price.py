@@ -1,5 +1,5 @@
 from langchain.tools import Tool
-from Backend.Tools.detailsagents_tools.retriever_tool import vectorstore
+from Backend.Tools.retriever_tool import vectorstore
 from Backend.schemas.detailsagent_tools_schemas import ProductPriceInfo, ProductPriceListOutput , PriceCheckInput
 
 def get_price_func(product_names: PriceCheckInput) -> ProductPriceListOutput:

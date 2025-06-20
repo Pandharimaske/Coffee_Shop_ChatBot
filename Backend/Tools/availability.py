@@ -1,6 +1,6 @@
 from langchain.tools import Tool
 from Backend.schemas.detailsagent_tools_schemas import AvailabilityInput, PriceCheckInput
-from Backend.Tools.detailsagents_tools.retriever_tool import vectorstore
+from Backend.Tools.retriever_tool import vectorstore
 
 def check_availability_func(product_names: AvailabilityInput) -> PriceCheckInput:
     """

@@ -2,10 +2,10 @@ import pprint
 from langchain_core.messages import ToolMessage, AIMessage
 from langgraph.prebuilt import create_react_agent
 from Backend.prompts.details_prompt import details_prompt
-from Backend.Tools.detailsagents_tools.about_us import about_us_tool
-from Backend.Tools.detailsagents_tools.availability import check_availability_tool
-from Backend.Tools.detailsagents_tools.retriever_tool import rag_tool
-from Backend.Tools.detailsagents_tools.get_price import get_price_tool
+from Backend.Tools.about_us import about_us_tool
+from Backend.Tools.availability import check_availability_tool
+from Backend.Tools.retriever_tool import rag_tool
+from Backend.Tools.get_price import get_price_tool
 from Backend.utils.logger import logger
 from Backend.utils.util import load_llm
 from Backend.schemas.state_schema import DetailsAgentState
