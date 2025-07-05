@@ -21,12 +21,13 @@ class GuardAgent:
             if not user_input or not user_input.strip():
                 logger.warning("Received empty or invalid input to GuardAgent.")
 
-            result = self.chain.invoke({"user_input": user_input , "state":state , "user_name":state["user_name"]})
+            result = self.chain.invoke({"user_input": user_input , "state":state})
             logger.debug(f"Guard chain result: {result}")
 
             return {
                 "decision": result.decision,
-                "response_message": result.response_message or "I understand. How can I help you with your order?"
+                "response_message": result.response_message or "I understand. How can I help you with your order?" , 
+                "memory_node":result.memory_node or False
             }
 
         except Exception as e:

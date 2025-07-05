@@ -8,23 +8,24 @@ from Backend.nodes.recommendation_node import RecommendationAgentNode
 from Backend.agents.reccomendation_agent import RecommendationAgent
 from Backend.nodes.update_order_node import UpdateOrderAgentNode
 from Backend.nodes.response_node import ResponseNode
+from Backend.nodes.memory_node import MemoryNode
 from Backend.graph.states import CoffeeAgentState
+
+
 
 def build_coffee_shop_graph():
     # ✅ Use structured state
     builder = StateGraph(CoffeeAgentState, input=CoffeeAgentState, output=CoffeeAgentState)
 
-    # Step 1: Guard agent
+    # Nodes
     builder.add_node("guard", GuardNode())
-
-    # Step 2: Classification agent
+    builder.add_node("memory", MemoryNode())
+    builder.add_node("skip_memory", lambda state: state)
     builder.add_node("classify", ClassificationNode())
-
-    # Step 3: Downstream agent nodes
     builder.add_node("details", DetailsAgentNode())
     builder.add_node("take_order", OrderAgentNode())
     builder.add_node("update_order", UpdateOrderAgentNode())
-    builder.add_node("final_response" , ResponseNode())
+    builder.add_node("final_response", ResponseNode())
 
     recommendation_agent = RecommendationAgent(
         apriori_recommendation_path="/Users/pandhari/Coffee_Shop_ChatBot/Backend/Data/apriori_recommendations.json",
@@ -35,31 +36,47 @@ def build_coffee_shop_graph():
     # Entry
     builder.set_entry_point("guard")
 
-    # Decision router after guard
-    def guard_decision_router(state: CoffeeAgentState):
+    # Step 1: Route from guard to memory or skip_memory
+    def memory_router(state: CoffeeAgentState):
+        from Backend.utils.logger import logger
+        logger.info(f"[Graph] memory flag is: {state.get('memory_node')}")
+        return "memory" if state.get("memory_node") else "skip_memory"
+
+    builder.add_conditional_edges("guard", memory_router, {
+        "memory": "memory",
+        "skip_memory": "skip_memory"
+    })
+
+    # Step 2: Route memory/skip_memory to classify or final_response
+    def post_memory_router(state: CoffeeAgentState):
         return "classify" if state.get("decision") == "allowed" else "final_response"
 
-    builder.add_conditional_edges("guard", guard_decision_router, {
+    builder.add_conditional_edges("memory", post_memory_router, {
         "classify": "classify",
         "final_response": "final_response"
     })
 
-    # Decision router after classification
+    builder.add_conditional_edges("skip_memory", post_memory_router, {
+        "classify": "classify",
+        "final_response": "final_response"
+    })
+
+    # Step 3: Classification routing
     def classify_router(state: CoffeeAgentState):
         return state["target_agent"]
 
     builder.add_conditional_edges("classify", classify_router, {
         "details_agent": "details",
         "order_taking_agent": "take_order",
-        "recommendation_agent": "recommend" , 
-        "update_order_agent":"update_order"
+        "recommendation_agent": "recommend",
+        "update_order_agent": "update_order"
     })
 
-    # Final responses
+    # Step 4: Agent responses to final
     builder.add_edge("details", "final_response")
     builder.add_edge("take_order", "final_response")
     builder.add_edge("recommend", "final_response")
     builder.add_edge("update_order", "final_response")
-    builder.add_edge("final_response" , END)
+    builder.add_edge("final_response", END)
 
     return builder.compile()

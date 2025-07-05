@@ -5,7 +5,7 @@ from Backend.graph.states import ProductItem
 class GuardAgentState(TypedDict):
     decision: Literal["allowed", "not allowed"]
     response_message: str
-
+    memory_node:bool
 
 class ClassificationAgentState(TypedDict):
     target_agent: str

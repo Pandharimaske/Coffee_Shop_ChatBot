@@ -6,7 +6,7 @@ refinement_prompt = ChatPromptTemplate.from_messages([
 You are given:
 - the latest user query
 - the response from another expert agent
-- the full conversation state, including the user's name, previous order, and more
+- the full conversation state, including the users_memory, previous order, and more
 
 Your job is to rewrite the agent's response in a way that is:
 1. More personal (use the user's name if available)

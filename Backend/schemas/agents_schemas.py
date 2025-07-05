@@ -26,10 +26,17 @@ class RecommendationTypeEnum(str, Enum):
 # ---------------- Schemas ---------------- #
 class GuardDecision(BaseModel):
     """Schema for guard agent's output determining query access."""
+    
     decision: GuardDecisionType = Field(..., description="Decision: allowed or not allowed")
+
     response_message: Optional[str] = Field(
         default="", 
         description="Message shown to the user. 'Sorry, I can’t help you with that.' if not allowed; empty if allowed."
+    )
+
+    memory_node: bool = Field(
+        default=False,
+        description="Decide whether needs to call long term memory update"
     )
 
 
