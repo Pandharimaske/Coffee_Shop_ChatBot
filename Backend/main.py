@@ -1,13 +1,12 @@
 from Backend.graph.coffee_shop_graph import build_coffee_shop_graph
 from Backend.graph.states import CoffeeAgentState
 from Backend.utils.logger import logger
-from Backend.utils.load_memory import load_memory
 
 
 # ------------------ Config -------------------
 config = {
     "configurable": {
-        "user_id": 1
+        "user_id": 7
     }
 }
 # ------------------ Run CLI Bot -------------------
@@ -18,6 +17,7 @@ def main():
     print("☕ Welcome to the Coffee Shop Bot! Ask anything or type 'exit' to quit.")
     state = CoffeeAgentState(
         user_memory = None,
+        chat_summary="",
         user_input="",
         response_message=None,
         decision=None,
@@ -28,7 +28,7 @@ def main():
     )
 
     while True:
-        load_memory(user_id=config["configurable"]["user_id"])
+        print("Current State:\n" , state)
         user_input = input("\nYou: ")
         if user_input.lower() in ["exit", "quit"]:
             print("Goodbye! 👋")

@@ -9,6 +9,7 @@ class ProductItem(TypedDict):
 
 class CoffeeAgentState(TypedDict):
     user_memory: UserMemory
+    chat_summary: str
     user_input: str
     response_message: Optional[str]
     decision: Optional[Literal["allowed", "not_allowed"]]

@@ -9,6 +9,8 @@ from Backend.agents.reccomendation_agent import RecommendationAgent
 from Backend.nodes.update_order_node import UpdateOrderAgentNode
 from Backend.nodes.response_node import ResponseNode
 from Backend.nodes.memory_node import MemoryNode
+from Backend.nodes.chat_summary_node import SummaryNode
+from Backend.nodes.query_rewrite_node import QueryRewriterNode
 from Backend.graph.states import CoffeeAgentState
 
 
@@ -26,6 +28,8 @@ def build_coffee_shop_graph():
     builder.add_node("take_order", OrderAgentNode())
     builder.add_node("update_order", UpdateOrderAgentNode())
     builder.add_node("final_response", ResponseNode())
+    builder.add_node("chat_summary", SummaryNode())
+    builder.add_node("query_rewrite", QueryRewriterNode())
 
     recommendation_agent = RecommendationAgent(
         apriori_recommendation_path="/Users/pandhari/Coffee_Shop_ChatBot/Backend/Data/apriori_recommendations.json",
@@ -34,7 +38,9 @@ def build_coffee_shop_graph():
     builder.add_node("recommend", RecommendationAgentNode(recommendation_agent))
 
     # Entry
-    builder.set_entry_point("guard")
+    builder.set_entry_point("query_rewrite")
+
+    builder.add_edge("query_rewrite" , "guard")
 
     # Step 1: Route from guard to memory or skip_memory
     def memory_router(state: CoffeeAgentState):
@@ -77,6 +83,7 @@ def build_coffee_shop_graph():
     builder.add_edge("take_order", "final_response")
     builder.add_edge("recommend", "final_response")
     builder.add_edge("update_order", "final_response")
-    builder.add_edge("final_response", END)
+    builder.add_edge("final_response" , "chat_summary")
+    builder.add_edge("chat_summary", END)
 
     return builder.compile()
