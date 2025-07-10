@@ -31,8 +31,8 @@ def build_coffee_shop_graph():
     builder.add_node("query_rewrite", QueryRewriterNode())
 
     recommendation_agent = RecommendationAgent(
-        apriori_recommendation_path="/Users/pandhari/Coffee_Shop_ChatBot/Backend/Data/apriori_recommendations.json",
-        popular_recommendation_path="/Users/pandhari/Coffee_Shop_ChatBot/Backend/Data/popularity_recommendation.csv"
+        apriori_recommendation_path="Backend/Data/apriori_recommendations.json",
+        popular_recommendation_path="Backend/Data/popularity_recommendation.csv"
     )
     builder.add_node("recommend", RecommendationAgentNode(recommendation_agent))
 
