@@ -1,18 +1,21 @@
-# Use an official Python base image
-FROM python:3.11-slim
+# Stage 1: build environment
+FROM python:3.11-slim as builder
 
-# Set working directory
 WORKDIR /app
 
-# Copy requirements and install them
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --user --no-cache-dir -r requirements.txt
 
-# Copy your application code
+# Stage 2: runtime environment
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY --from=builder /root/.local /root/.local
+ENV PATH=/root/.local/bin:$PATH
+
 COPY . .
 
-# Expose port
 EXPOSE 8000
 
-# Run the app
-CMD ["uvicorn", "App.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "App.main:app", "--bind", "0.0.0.0:8000"]

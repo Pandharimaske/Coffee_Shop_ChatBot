@@ -4,6 +4,13 @@ from fastapi import FastAPI
 from App.schemas import ChatRequest, ChatResponse
 from App.chatbot import get_bot_response
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
 app = FastAPI(title="Coffee Shop Bot API")
 
