@@ -1,5 +1,8 @@
 class MemoryNode:
     def __call__(self, state, config):
+        if not state["memory_node"]:
+            return state
+        
         user_id = config["configurable"]["user_id"]
         user_input = state["user_input"]
 

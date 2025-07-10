@@ -6,7 +6,7 @@ from Backend.utils.util import load_llm
 
 class ResponseNode(Runnable):
     def __init__(self):
-        self.llm = load_llm(temperature=0.1)
+        self.llm = load_llm()
         self.chain = refinement_prompt | self.llm
 
     def invoke(self , state: CoffeeAgentState , config=None) -> CoffeeAgentState:

@@ -22,7 +22,6 @@ def build_coffee_shop_graph():
     # Nodes
     builder.add_node("guard", GuardNode())
     builder.add_node("memory", MemoryNode())
-    builder.add_node("skip_memory", lambda state: state)
     builder.add_node("classify", ClassificationNode())
     builder.add_node("details", DetailsAgentNode())
     builder.add_node("take_order", OrderAgentNode())
@@ -42,16 +41,8 @@ def build_coffee_shop_graph():
 
     builder.add_edge("query_rewrite" , "guard")
 
-    # Step 1: Route from guard to memory or skip_memory
-    def memory_router(state: CoffeeAgentState):
-        from Backend.utils.logger import logger
-        logger.info(f"[Graph] memory flag is: {state.get('memory_node')}")
-        return "memory" if state.get("memory_node") else "skip_memory"
 
-    builder.add_conditional_edges("guard", memory_router, {
-        "memory": "memory",
-        "skip_memory": "skip_memory"
-    })
+    builder.add_edge("guard" , "memory")
 
     # Step 2: Route memory/skip_memory to classify or final_response
     def post_memory_router(state: CoffeeAgentState):
@@ -62,10 +53,6 @@ def build_coffee_shop_graph():
         "final_response": "final_response"
     })
 
-    builder.add_conditional_edges("skip_memory", post_memory_router, {
-        "classify": "classify",
-        "final_response": "final_response"
-    })
 
     # Step 3: Classification routing
     def classify_router(state: CoffeeAgentState):
