@@ -31,6 +31,10 @@ def chat(request: ChatRequest):
     result = get_bot_response(request.user_input, request.user_id, request.state)
     return ChatResponse(**result)
 
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("App.main:app", host="127.0.0.1", port=8000, reload=True)
