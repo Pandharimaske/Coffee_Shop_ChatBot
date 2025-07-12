@@ -6,7 +6,7 @@ from Backend.utils.logger import logger
 # ------------------ Config -------------------
 config = {
     "configurable": {
-        "user_id": 7
+        "user_id": 10
     }
 }
 # ------------------ Run CLI Bot -------------------
@@ -17,6 +17,7 @@ def main():
     print("☕ Welcome to the Coffee Shop Bot! Ask anything or type 'exit' to quit.")
     state = CoffeeAgentState(
         user_memory = None,
+        messages = [] , 
         chat_summary="",
         user_input="",
         response_message=None,
@@ -37,7 +38,7 @@ def main():
         try:
             state["user_input"] = user_input
             state = graph.invoke(state, config=config)
-            content = state["response_message"] or "Sorry, I can't help with that."
+            content = state["response_message"]
             print(f"\nAssistant: {content}")
             logger.info(f"Input: {user_input}")
         except Exception as e:

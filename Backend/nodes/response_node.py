@@ -1,5 +1,5 @@
 from langchain_core.runnables import Runnable
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, AIMessage
 from Backend.graph.states import CoffeeAgentState
 from Backend.prompts.response_prompt import refinement_prompt
 from Backend.utils.util import load_llm
@@ -20,4 +20,11 @@ class ResponseNode(Runnable):
 
         refined_response = self.chain.invoke(inputs).content
         state["response_message"] = refined_response
+
+        if "messages" not in state or state["messages"] is None:
+            state["messages"] = []
+
+        # Append to message history
+        state["messages"].append(HumanMessage(content=state["user_input"]))
+        state["messages"].append(AIMessage(content=refined_response))
         return CoffeeAgentState(**state)
