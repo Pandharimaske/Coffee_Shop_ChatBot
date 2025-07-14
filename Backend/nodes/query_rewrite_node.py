@@ -21,7 +21,7 @@ class QueryRewriterNode(Runnable):
     def invoke(self, state: CoffeeAgentState, config=None) -> CoffeeAgentState:
         rewritten = self.chain.invoke({
             "user_input": state["user_input"] , 
-            "messages": self.render_messages(state["messages"]),
+            "messages": self.render_messages(state.get("messages" , [])),
             "chat_summary": state.get("chat_summary", ""),
             "user_memory": str(state.get("user_memory", "")),
             "state": str(state)
