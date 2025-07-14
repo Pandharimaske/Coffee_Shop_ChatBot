@@ -18,7 +18,7 @@ def get_messages(id: int) -> list[BaseMessage]:
     return [
         HumanMessage(content=m["content"]) if m["role"] == "human" else AIMessage(content=m["content"])
         for m in data
-    ]
+    ] if data else []
 
 def save_messages(id: int, messages: list[BaseMessage]):
     serialized = serialize_messages(messages)
