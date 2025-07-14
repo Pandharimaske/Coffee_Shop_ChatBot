@@ -14,7 +14,7 @@ def serialize_messages(messages: list[BaseMessage]) -> list[dict]:
 
 def get_messages(id: int) -> list[BaseMessage]:
     response = supabase.table("summaries").select("messages").eq("id", id).execute()
-    data = response.data[0]["messages"]
+    data = response.data[0]["messages"] if response.data else None
     return [
         HumanMessage(content=m["content"]) if m["role"] == "human" else AIMessage(content=m["content"])
         for m in data
