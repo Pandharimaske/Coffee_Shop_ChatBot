@@ -16,7 +16,7 @@ def save_user_memory(user_id: int, memory: UserMemory):
     """Upsert full user memory into Supabase."""
     data = memory.dict()
     data["id"] = user_id
-    data["last_updated"] = datetime.utcnow().isoformat()
+    data["last_updated"] = datetime.now().isoformat()
     supabase.table("user_profiles").upsert(data).execute()
 
 
