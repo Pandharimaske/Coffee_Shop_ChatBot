@@ -9,11 +9,6 @@ class GuardNode(Runnable):
         self.agent = GuardAgent()
 
     def invoke(self, state: CoffeeAgentState, config=None) -> CoffeeAgentState:
-        user_id = config["configurable"]["user_id"]
-        state["user_memory"] = get_user_memory(user_id)
-
-        state["chat_summary"] = get_summary(id=user_id)
-
         result = self.agent(state)
         state["decision"] = result["decision"]
         state["response_message"] = result["response_message"]

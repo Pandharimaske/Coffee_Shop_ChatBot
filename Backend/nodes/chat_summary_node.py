@@ -1,7 +1,7 @@
 from langchain_core.runnables import Runnable
 from langchain_core.messages import BaseMessage, SystemMessage
 from Backend.memory.summary_buffer import ConversationSummaryBufferMessageHistory
-from Backend.utils.summary_memory import save_summary
+from Backend.utils.summary_memory import save_summary , save_messages
 from Backend.graph.states import CoffeeAgentState
 from Backend.utils.util import load_llm
 
@@ -39,9 +39,8 @@ class SummaryNode(Runnable):
         # Generate new summary
         updated_summary = history.get_formatted_memory()
 
-        # Update state
-        state["chat_summary"] = updated_summary
-        state["messages"] = recent_messages
+        # Save Memory and Messages
         save_summary(user_id, updated_summary)
+        save_messages(user_id , recent_messages)
 
         return state
