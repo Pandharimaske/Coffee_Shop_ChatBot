@@ -18,11 +18,11 @@ class SummaryNode(Runnable):
 
         # If messages are fewer than or equal to k, skip summarization
         if len(all_messages) <= self.k:
-            return state
+            return CoffeeAgentState(**state)
 
         # Split messages into old (to summarize) and recent (to keep)
-        old_messages = all_messages[:-self.k]
-        recent_messages = all_messages[-self.k:]
+        old_messages = all_messages[-2:]
+        recent_messages = all_messages[:-2] 
 
         # Create summarizer and insert previous summary
         history = ConversationSummaryBufferMessageHistory(
@@ -40,7 +40,9 @@ class SummaryNode(Runnable):
         updated_summary = history.get_formatted_memory()
 
         # Save Memory and Messages
+        state["chat_summary"] = updated_summary
+        state["messages"] = recent_messages
         save_summary(user_id, updated_summary)
         save_messages(user_id , recent_messages)
 
-        return state
+        return CoffeeAgentState(**state)

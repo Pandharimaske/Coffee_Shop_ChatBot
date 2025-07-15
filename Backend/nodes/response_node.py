@@ -21,10 +21,11 @@ class ResponseNode(Runnable):
         refined_response = self.chain.invoke(inputs).content
         state["response_message"] = refined_response
 
-        if "messages" not in state or state["messages"] is None:
-            state["messages"] = []
+        # if "messages" not in state or state["messages"] is None:
+        #     state["messages"] = []
+
 
         # Append to message history
-        state["messages"].append(HumanMessage(content=state["user_input"]))
-        state["messages"].append(AIMessage(content=refined_response))
+        state["messages"] = [HumanMessage(content=state["user_input"]),AIMessage(content=state["response_message"])] + state["messages"]
+    
         return CoffeeAgentState(**state)
