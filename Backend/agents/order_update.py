@@ -39,29 +39,17 @@ class OrderUpdateAgent:
             return OrderUpdateState(updates=[])
 
 def update_order(state: CoffeeAgentState) -> CoffeeAgentState:
-    print("🛠️ [update_order] Entered update_order function.")
-    logger.info("🛠️ Entered update_order function.")
-
-    # Ensure 'order' key exists
-    if "order" not in state:
-        logger.warning("⚠️ 'order' key missing in state. Initializing empty order list.")
-        state["order"] = []
-
-    # Extract updates using LLM
     agent = OrderUpdateAgent()
     update_input = agent.get_response(state["user_input"])
 
     logger.debug(f"🔍 Parsed updates: {update_input.updates}")
 
-    # Convert existing order to a dictionary for easier updates
     order_dict = {item["name"].lower(): item for item in state["order"]}
-    logger.debug(f"🧾 Existing order dict: {order_dict}")
 
     for update in update_input.updates:
         item_name = update.name.strip().lower()
         current_item = order_dict.get(item_name)
 
-        # Get price from vectorstore
         results = vectorstore.similarity_search(
             query="",
             k=1,
@@ -69,7 +57,6 @@ def update_order(state: CoffeeAgentState) -> CoffeeAgentState:
         )
         price = results[0].metadata.get("price", 0.0) if results else 0.0
 
-        logger.debug(f"💵 Price lookup for {update.name.strip().title()}: ₹{price}")
 
         if update.set_quantity is not None:
             if update.set_quantity > 0:
@@ -80,10 +67,8 @@ def update_order(state: CoffeeAgentState) -> CoffeeAgentState:
                     "per_unit_price": price,
                     "total_price": total_price
                 }
-                logger.info(f"✅ Set quantity for {update.name}: {update.set_quantity}")
             else:
                 order_dict.pop(item_name, None)
-                logger.info(f"❌ Removed item due to zero quantity: {update.name}")
 
         elif update.delta_quantity is not None:
             if current_item:
@@ -96,7 +81,6 @@ def update_order(state: CoffeeAgentState) -> CoffeeAgentState:
                     logger.info(f"🔁 Updated {update.name} to quantity: {new_quantity}")
                 else:
                     order_dict.pop(item_name, None)
-                    logger.info(f"❌ Removed item after delta update: {update.name}")
             else:
                 if update.delta_quantity > 0:
                     total_price = price * update.delta_quantity
@@ -106,10 +90,8 @@ def update_order(state: CoffeeAgentState) -> CoffeeAgentState:
                         "per_unit_price": price,
                         "total_price": total_price
                     }
-                    logger.info(f"➕ Added new item {update.name} with quantity: {update.delta_quantity}")
 
     state["order"] = list(order_dict.values())
-    logger.debug(f"🛒 Final order: {state['order']}")
 
     # Create a summary response
     if state["order"]:
@@ -126,5 +108,4 @@ def update_order(state: CoffeeAgentState) -> CoffeeAgentState:
         state["final_price"] = 0.0
         logger.info("🧹 Order is now empty.")
 
-    print("✅ [update_order] Finished update_order function.")
     return state

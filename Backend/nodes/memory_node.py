@@ -9,24 +9,23 @@ class MemoryNode:
         from Backend.memory.extractor import MemoryUpdateAgent
         agent = MemoryUpdateAgent()
         memory_intent = agent.extract_memory_action(user_input)
-        print(memory_intent)
 
         to_add = memory_intent.add_or_update or {}
         to_remove = memory_intent.remove or {}
 
         from Backend.utils.memory_manager import (
-            get_user_memory, merge_and_update_memory, save_user_memory, remove_from_memory
+            merge_and_update_memory, save_user_memory, remove_from_memory
         )
 
-        memory = get_user_memory(user_id)
+        # memory = get_user_memory(user_id)
+        memory = state["user_memory"]
         if to_add:
-            print("Starting to_add")
-            memory = merge_and_update_memory(user_id, to_add)
+            memory = merge_and_update_memory(updates=to_add , existing=memory)
         if to_remove:
-            print("Starting to_remove")
-            memory = remove_from_memory(memory, to_remove)
-            save_user_memory(user_id, memory)
+            memory = remove_from_memory(existing=memory, to_remove=to_remove)
 
         state["response_message"] = "Got it. I’ve updated your preferences."
         state["user_memory"] = memory
+        save_user_memory(user_id=user_id , memory=state["user_memory"])
         return state
+    

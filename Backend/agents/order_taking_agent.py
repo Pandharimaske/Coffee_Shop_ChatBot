@@ -66,7 +66,7 @@ class OrderTakingAgent:
             unavailable = "\n".join(f"❌ {name}" for name in unavailable_items)
             summary += (
                 f"\n\nTotal (for available items): ${total}\n\n"
-                f"However, some items are not available:\n{unavailable}\n"
+                f"However, some items that we don't serve in our coffee shop:\n{unavailable}\n"
                 f"Would you like to replace them?"
             )
         else:

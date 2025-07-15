@@ -5,7 +5,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from Backend.graph.coffee_shop_graph import build_coffee_shop_graph
 from Backend.utils.logger import logger
 from Backend.utils.memory_manager import get_user_memory
-from Backend.utils.summary_memory import get_summary , get_messages
+from Backend.utils.summary_memory import get_summary , get_messages , get_order
 
 graph = build_coffee_shop_graph() 
 logger.info("☕ Coffee Shop Bot API initialized")
@@ -29,6 +29,7 @@ def get_bot_response(user_input: str, user_id: int) -> dict:
         state["user_memory"] = get_user_memory(user_id)
         state["chat_summary"] = get_summary(id=user_id)
         state["messages"] = get_messages(id = user_id)
+        state["order"] , state["final_price"] = get_order(id = user_id)
 
         config = {
             "configurable": {

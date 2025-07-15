@@ -6,10 +6,27 @@ from Backend.memory.supabase_client import supabase
 
 
 def get_user_memory(user_id: int) -> UserMemory:
-    """Fetch user memory from Supabase."""
+    """Fetch user memory from Supabase, or create it with defaults if not present."""
+
     res = supabase.table("user_profiles").select("*").eq("id", user_id).execute()
-    data = res.data[0] if res.data else {}
-    return UserMemory(**data)
+
+    if not res.data:
+        # Create default user memory
+        default_data = {
+            "id": user_id,            # assuming 'id' is the primary key in the table
+            "name": None,
+            "likes": [],
+            "dislikes": [],
+            "allergies": [],
+            "last_order": None,
+            "feedback": [],
+            "location": None
+        }
+
+        supabase.table("user_profiles").insert(default_data).execute()
+        return UserMemory(**{k: v for k, v in default_data.items() if k in UserMemory.__fields__})
+
+    return UserMemory(**res.data[0])
 
 
 def save_user_memory(user_id: int, memory: UserMemory):
@@ -20,9 +37,8 @@ def save_user_memory(user_id: int, memory: UserMemory):
     supabase.table("user_profiles").upsert(data).execute()
 
 
-def merge_and_update_memory(user_id: int, updates: Dict) -> UserMemory:
+def merge_and_update_memory(updates: Dict , existing:UserMemory) -> UserMemory:
     """Merge list fields and overwrite scalar fields, then save."""
-    existing = get_user_memory(user_id)
 
     for key, new_val in updates.items():
         if isinstance(new_val, list):
@@ -31,14 +47,11 @@ def merge_and_update_memory(user_id: int, updates: Dict) -> UserMemory:
             setattr(existing, key, merged)
         else:
             setattr(existing, key, new_val)
-
-    save_user_memory(user_id, existing)
     return existing
 
 
-def remove_from_memory(user_id: int, to_remove: Dict) -> UserMemory:
+def remove_from_memory(to_remove: Dict , existing:UserMemory) -> UserMemory:
     """Remove items from list fields or nullify scalar fields, then save."""
-    existing = get_user_memory(user_id)
 
     for key, values in to_remove.items():
         if isinstance(values, list) and hasattr(existing, key):
@@ -49,5 +62,4 @@ def remove_from_memory(user_id: int, to_remove: Dict) -> UserMemory:
             if getattr(existing, key) == values:
                 setattr(existing, key, None)
 
-    save_user_memory(user_id, existing)
     return existing
