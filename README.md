@@ -63,7 +63,7 @@ flowchart TD
 
 ### 1. Clone the Repo
 ```bash
-git clone https://github.com/yourusername/coffee-shop-chatbot.git
+git clone https://github.com/Pandharimaske/Coffee_Shop_ChatBot.git
 cd coffee-shop-chatbot
 ```
 
