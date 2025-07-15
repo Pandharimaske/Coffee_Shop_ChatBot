@@ -1,6 +1,6 @@
 from langchain_core.runnables import Runnable
 from langchain_core.messages import BaseMessage, SystemMessage
-from Backend.memory.summary_buffer import ConversationSummaryBufferMessageHistory
+from Backend.memory.summary_buffer import ConversationSummaryMemory
 from Backend.utils.summary_memory import save_summary , save_messages
 from Backend.graph.states import CoffeeAgentState
 from Backend.utils.util import load_llm
@@ -25,10 +25,7 @@ class SummaryNode(Runnable):
         recent_messages = all_messages[:-2] 
 
         # Create summarizer and insert previous summary
-        history = ConversationSummaryBufferMessageHistory(
-            llm=self.llm,
-            k=self.k
-        )
+        history = ConversationSummaryMemory()
 
         if prev_summary:
             history.add_messages([SystemMessage(content=prev_summary)])

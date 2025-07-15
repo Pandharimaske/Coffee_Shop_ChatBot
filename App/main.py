@@ -1,16 +1,8 @@
-# App/main.py
-
 from fastapi import FastAPI
 from App.schemas import ChatRequest, ChatResponse
 from App.chatbot import get_bot_response
 from fastapi.middleware.cors import CORSMiddleware
-from dotenv import load_dotenv
-import os
 
-load_dotenv()
-
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
 app = FastAPI(title="Coffee Shop Bot API")
 
@@ -28,7 +20,7 @@ def root():
 
 @app.post("/chat", response_model=ChatResponse)
 def chat(request: ChatRequest):
-    result = get_bot_response(request.user_input, request.user_id, request.state)
+    result = get_bot_response(request.user_input, request.user_id)
     return ChatResponse(**result)
 
 @app.get("/health")

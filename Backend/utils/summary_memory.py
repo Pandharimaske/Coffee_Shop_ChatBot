@@ -5,12 +5,11 @@ from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
 def serialize_messages(messages: list[BaseMessage]) -> list[dict]:
     return [
         {
-            "role": "human" if isinstance(m, HumanMessage) else "ai",
+            "role": "human" if m.type == "human" else "ai",
             "content": m.content
         }
         for m in messages
     ]
-
 
 def get_messages(id: int) -> list[BaseMessage]:
     response = supabase.table("summaries").select("messages").eq("id", id).execute()
@@ -23,9 +22,11 @@ def get_messages(id: int) -> list[BaseMessage]:
     ]
 def save_messages(id: int, messages: list[BaseMessage]):
     serialized = serialize_messages(messages)
-    supabase.table("summaries").update({
-        "messages": serialized
-    }).eq("id", id).execute()
+    supabase.table("summaries").upsert({
+        "id":id , 
+        "messages": serialized , 
+        "last_updated": datetime.now().isoformat()
+    }).execute()
 
 
 
@@ -40,3 +41,4 @@ def save_summary(id: int, summary: str):
         "summary": summary,
         "last_updated": datetime.now().isoformat()
     }).execute()
+

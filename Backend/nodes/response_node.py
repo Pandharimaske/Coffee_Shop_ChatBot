@@ -3,6 +3,7 @@ from langchain_core.messages import HumanMessage, AIMessage
 from Backend.graph.states import CoffeeAgentState
 from Backend.prompts.response_prompt import refinement_prompt
 from Backend.utils.util import load_llm
+from Backend.utils.summary_memory import save_messages
 
 class ResponseNode(Runnable):
     def __init__(self):
@@ -10,6 +11,8 @@ class ResponseNode(Runnable):
         self.chain = refinement_prompt | self.llm
 
     def invoke(self , state: CoffeeAgentState , config=None) -> CoffeeAgentState:
+
+        user_id = config["configurable"]["user_id"]
 
         # Compose prompt
         inputs = {
@@ -27,5 +30,6 @@ class ResponseNode(Runnable):
 
         # Append to message history
         state["messages"] = [HumanMessage(content=state["user_input"]),AIMessage(content=state["response_message"])] + state["messages"]
+        save_messages(id = user_id , messages=state["messages"])
     
         return CoffeeAgentState(**state)
