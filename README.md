@@ -19,10 +19,11 @@ flowchart TD
     Classify --> UpdateAgent[update_order_agent]
 
 
-    Details --> Final[final_response]
-    Recommend --> Final
-    TakeOrder --> Final
-    UpdateOrder --> Final
+    DetailsAgent[details_agent] --> Final[final_response]
+    RecommendAgent[recommendation_agent] --> Final
+    OrderAgent[order_taking_agent] --> Final
+    UpdateAgent[update_order_agent] --> Final
+
 
     Final --> Summary[chat_summary]
     Summary --> End[__end__]
