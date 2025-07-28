@@ -15,4 +15,3 @@ sentence-transformers==3.4.1
 python-dotenv
 gunicorn
 httpx
-python-telegram-bot==20.7
