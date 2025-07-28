@@ -49,7 +49,7 @@ async def telegram_webhook(req: Request):
 
     # Directly use your bot logic
     result = get_bot_response(message, chat_id)
-    bot_reply = result.get("bot_response", "Sorry, something went wrong.")
+    bot_reply = result.get("response", "Sorry, something went wrong.")
 
     # Send reply to Telegram
     async with httpx.AsyncClient() as client:
