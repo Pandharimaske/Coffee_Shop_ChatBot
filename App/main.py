@@ -8,8 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Load Telegram token (set this in Render environment variables)
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "your_telegram_bot_token_here")
-TELEGRAM_API_URL = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}"
+TELEGRAM_API_URL = f"https://api.telegram.org/bot{os.getenv("TELEGRAM_TOKEN")}"
 
 app = FastAPI(title="Coffee Shop Bot API")
 
