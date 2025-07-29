@@ -44,11 +44,14 @@ async def telegram_webhook(req: Request):
     message = data.get("message", {}).get("text")
     chat_id = data.get("message", {}).get("chat", {}).get("id")
 
+    print("Telegram message: " , message)
+    print("Telegram chat_id: " , chat_id)
+
     if not message or not chat_id:
         return {"ok": True}
 
     # Directly use your bot logic
-    result = await get_bot_response(message, chat_id)
+    result = get_bot_response(message, chat_id)
     bot_reply = result.get("response", "Sorry, something went wrong.")
 
     # Send reply to Telegram

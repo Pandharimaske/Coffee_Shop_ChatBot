@@ -26,10 +26,22 @@ def get_bot_response(user_input: str, user_id: int) -> dict:
         }
 
         state["user_input"] = user_input
+
+        print("Starting get_user_memory")
         state["user_memory"] = get_user_memory(user_id)
+        print("Done get_user_memory")
+
+        print("Starting get_summary")
         state["chat_summary"] = get_summary(id=user_id)
+        print("Done get_summary")
+
+        print("Starting get_messages")
         state["messages"] = get_messages(id = user_id)
+        print("Done get_messages")
+
+        print("Starting get_order")
         state["order"] , state["final_price"] = get_order(id = user_id)
+        print("Done get_order")
 
         config = {
             "configurable": {
