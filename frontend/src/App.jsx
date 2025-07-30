@@ -16,12 +16,6 @@ function App() {
           <div className="text-2xl font-bold text-[#4B3832]">Coffee Shop</div>
           <nav className="space-x-6">
             <Link
-              to="/home"
-              className="text-[#4B3832] hover:text-[#3a2d27] font-medium"
-            >
-              Home
-            </Link>
-            <Link
               to="/menu"
               className="text-[#4B3832] hover:text-[#3a2d27] font-medium"
             >
@@ -46,7 +40,7 @@ function App() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto">
         <Routes>
-          <Route path="/home" element={<Home />} />
+          <Route path="/" element={<Home />} />
           <Route path="/menu" element={<Menu />} />
           <Route path="/order" element={<Order />} />
           <Route path="/login" element={<Login />} />
