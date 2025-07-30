@@ -135,7 +135,7 @@ const Chatbot = () => {
       )}
 
       <div
-        className={`fixed bottom-0 right-6 w-1/3 h-[500px] bg-[#fefcf9] shadow-2xl rounded-t-xl transform ${
+        className={`fixed bottom-0 inset-x-4 sm:right-6 sm:inset-x-auto w-full sm:w-1/3 h-[80vh] sm:h-[500px] bg-[#fefcf9] shadow-2xl rounded-t-xl transform ${
           isChatOpen ? "translate-y-0" : "translate-y-full"
         } transition-transform duration-300 ease-in-out z-40 flex flex-col border border-[#d1beab]`}
       >
