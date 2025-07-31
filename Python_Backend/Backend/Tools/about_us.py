@@ -1,6 +1,6 @@
 from langchain_core.tools import Tool
 
-def about_us_tool(_: str = "") -> str:
+def about_us_tool() -> str:
     """Provides information about Merry's Way Coffee including mission, story, specialties, and delivery zones."""
     return """
 Merry's Way Coffee
