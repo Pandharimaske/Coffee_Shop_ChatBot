@@ -2,10 +2,9 @@ from langchain_core.tools import Tool
 
 def about_us_tool(_: str = "") -> str:
     """Provides information about Merry's Way Coffee including mission, story, specialties, and delivery zones."""
-    # Optional: you can make this respond differently based on query if you want
     return """
 Merry's Way Coffee
-Location: Greenwich Village, New York City
+Location: Koregaon Park, Pune
 Founded: 2015
 
 Story:
@@ -22,21 +21,20 @@ Specialties:
 - Plant-based and gluten-free options
 
 Delivery Areas:
-- Greenwich Village
-- SoHo
-- West Village
-- Lower Manhattan
+- Koregaon Park
+- Viman Nagar
+- Kalyani Nagar
+- Camp
+- Shivaji Nagar
 
 Community Engagement:
-Hosts live music nights, art showcases, and fundraisers. Uses eco-friendly packaging and supports local farmers.
+Hosts live music nights, art showcases, and fundraisers. Uses eco-friendly packaging and supports local farmers. Free high-speed WiFi available for customers.
 
 Working Hours:
-- Monday-Friday: 7 AM – 8 PM
+- Monday–Friday: 7 AM – 8 PM
 - Saturday: 8 AM – 8 PM
 - Sunday: 8 AM – 6 PM
 """
-
-# Then register it as a Tool:
 
 about_us_tool = Tool(
     name="AboutUsTool",
