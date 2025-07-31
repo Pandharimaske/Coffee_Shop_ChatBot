@@ -1,36 +1,17 @@
-from langchain.prompts import PromptTemplate
-from langchain.output_parsers import PydanticOutputParser
-from langchain_core.runnables import RunnableSequence
 from Backend.utils.logger import logger
 from Backend.utils.util import load_llm
 from Backend.Tools.retriever_tool import vectorstore
-from Backend.schemas.state_schema import OrderInput , OrderTakingAgentState
+from Backend.schemas.state_schema import OrderInput
 from Backend.graph.states import ProductItem
 from typing import List
-from Backend.prompts.order_taking_prompt import parse_prompt
 
 # ---- Agent Class ----
 class OrderTakingAgent:
     def __init__(self):
-        self.llm = load_llm()
-        
-        self.parser = PydanticOutputParser(pydantic_object=OrderInput)
-
-        self.parse_prompt = parse_prompt
-
-        # ✅ Properly format prompt with required input variables
-        self.llm_parser_chain: RunnableSequence = (
-            self.parse_prompt.partial(format_instructions=self.parser.get_format_instructions())
-            | self.llm
-            | self.parser
-        )
-
+        self.llm = load_llm().with_structured_output(OrderInput)
         logger.info("OrderAgent initialized")
 
-    def parse_user_input(self, user_input: str) -> OrderInput:
-        return self.llm_parser_chain.invoke({"user_input": user_input})
-
-    def process_order(self, order: OrderInput) -> tuple[str, list[ProductItem] , float]:
+    def place_order(self, order: OrderInput) -> tuple[str, list[ProductItem] , float]:
         items = order.items
         available_items: List[ProductItem] = []
         unavailable_items = []
@@ -78,9 +59,10 @@ class OrderTakingAgent:
     def get_response(self, user_input: str) -> dict:
         try:
             logger.info(f"User input: {user_input}")
-            parsed_order = self.parse_user_input(user_input)
+            parsed_order = self.llm.invoke(user_input)
+            print(parsed_order)
             logger.info(f"Parsed order: {parsed_order}")
-            summary, filtered_order , total = self.process_order(parsed_order)
+            summary, filtered_order , total = self.place_order(parsed_order)
 
             return {
                 "order": filtered_order,
