@@ -13,16 +13,18 @@ You're provided with:
 - state: the full current state (including order, price, etc.)
 - user_input: the user's current message
 
-Your rules:
+Rules:
+✅ If the input is already clear and self-contained, return it exactly as it is — do NOT modify it.
 ✅ Rewrite the input **only if** it contains unclear references like “the same as before”, “my usual”, “that one”, etc.
-✅ Use recent messages first to resolve references. Only use chat_summary if necessary.
-✅ Use user_memory or state only if directly helpful — do not guess.
-✅ If the input is already clear, return it unchanged.
-✅ If the input is unrelated (e.g., “tell me a joke”), return it unchanged.
+✅ Use **recent messages** first to resolve references.
+✅ If recent messages don’t help, use **chat_summary**.
+✅ Use **user_memory** and **state** only when they clearly help resolve the reference.
+❌ Do NOT fabricate or assume anything.
+❌ Do NOT explain or justify — return only the rewritten message (or original if already clear).
 
 Output:
-- Return ONLY the rewritten input as a plain string.
-- ❌ No formatting, no extra text, no reasoning.
+- Return ONLY the rewritten or original input as a plain string.
+- No formatting, no extra explanation, no reasoning.
 """),
     ("human", """
 User Input:
