@@ -15,4 +15,4 @@ sentence-transformers==3.4.1
 python-dotenv
 gunicorn
 httpx
-langchain_google_genai=2.1.8
+langchain_google_genai==2.1.8
