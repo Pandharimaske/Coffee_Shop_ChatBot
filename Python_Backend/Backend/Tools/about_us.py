@@ -1,6 +1,6 @@
 from langchain_core.tools import Tool
 
-def about_us_tool() -> str:
+def about_us_tool(_: str = "") -> str:
     """Provides information about Merry's Way Coffee including mission, story, specialties, and delivery zones."""
     return """
 Merry's Way Coffee
@@ -39,5 +39,5 @@ Working Hours:
 about_us_tool = Tool(
     name="AboutUsTool",
     func=about_us_tool,
-    description="Use this tool to answer questions about the coffee shop itself: story, mission, delivery areas, working hours, specialties."
+    description="Use this tool to answer questions about the coffee shop itself: story, mission, delivery areas, working hours, specialties. No input is required"
 )
