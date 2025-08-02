@@ -9,9 +9,9 @@ class GuardAgent:
     """GuardAgent checks whether a user's query is within the allowed domain for a coffee shop assistant."""
 
     def __init__(self):
-        llm = load_llm()
+        self.llm = load_llm()
 
-        self.chain = guard_prompt | llm.with_structured_output(GuardDecision)
+        self.chain = guard_prompt | self.llm.with_structured_output(GuardDecision)
         logger.info("GuardAgent initialized")
 
     def get_response(self, state:CoffeeAgentState) -> GuardAgentState:

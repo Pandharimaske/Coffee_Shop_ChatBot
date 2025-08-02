@@ -1,6 +1,6 @@
 from langchain.tools import Tool
 from Backend.schemas.detailsagent_tools_schemas import AvailabilityInput, PriceCheckInput
-from Backend.Tools.retriever_tool import vectorstore
+from Backend.utils.util import load_vectorstore
 
 def check_availability_func(product_names: AvailabilityInput) -> PriceCheckInput:
     """
@@ -12,7 +12,7 @@ def check_availability_func(product_names: AvailabilityInput) -> PriceCheckInput
     for name in product_names:
         name_lower = name.strip().title()
 
-        results = vectorstore.similarity_search(
+        results = load_vectorstore().similarity_search(
             query="",  
             k=1,
             filter={"name": {"$eq": name_lower}}

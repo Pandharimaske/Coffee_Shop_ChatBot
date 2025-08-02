@@ -1,5 +1,5 @@
 from langchain.tools import Tool
-from Backend.Tools.retriever_tool import vectorstore
+from Backend.utils.util import load_vectorstore
 from Backend.schemas.detailsagent_tools_schemas import ProductPriceInfo, ProductPriceListOutput , PriceCheckInput
 
 def get_price_func(product_names: PriceCheckInput) -> ProductPriceListOutput:
@@ -12,7 +12,7 @@ def get_price_func(product_names: PriceCheckInput) -> ProductPriceListOutput:
         if is_available:
             name_normalized = name.strip().title()
 
-            results = vectorstore.similarity_search(
+            results = load_vectorstore().similarity_search(
                 query="",
                 k=1,
                 filter={"name": {"$eq": name_normalized}}
@@ -52,11 +52,6 @@ get_price_tool = Tool.from_function(
     func=get_price_func,
     description="""
             Get the price of one or more products. 
-
-            ⚠️ Only use this tool if:
-            - The product has already been verified as available using the CheckAvailabilityTool.
-            - Do NOT call this tool directly if availability is unknown.
-            If availability hasn’t been checked, call CheckAvailabilityTool first.
             """,
     args_schema=PriceCheckInput
 )

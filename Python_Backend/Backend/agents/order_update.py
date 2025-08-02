@@ -1,8 +1,7 @@
 from Backend.schemas.state_schema import OrderUpdateState
 from Backend.graph.states import CoffeeAgentState
 from Backend.utils.logger import logger
-from Backend.utils.util import load_llm
-from Backend.Tools.retriever_tool import vectorstore
+from Backend.utils.util import load_llm , load_vectorstore
 
 
 
@@ -10,6 +9,7 @@ from Backend.Tools.retriever_tool import vectorstore
 class OrderUpdateAgent:
     def __init__(self):
         self.llm = load_llm().with_structured_output(OrderUpdateState)
+        self.vectorstore = load_vectorstore()
         logger.info("OrderUpdateAgent initialized")
 
 
@@ -25,7 +25,7 @@ class OrderUpdateAgent:
             item_name = update.name.strip().lower()
             current_item = order_dict.get(item_name)
 
-            results = vectorstore.similarity_search(
+            results = self.vectorstore.similarity_search(
                 query="",
                 k=1,
                 filter={"name": {"$eq": update.name.strip().title()}}

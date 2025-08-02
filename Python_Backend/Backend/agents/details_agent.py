@@ -1,4 +1,3 @@
-import pprint
 from langchain_core.messages import ToolMessage, AIMessage
 from langgraph.prebuilt import create_react_agent
 from Backend.prompts.details_prompt import details_prompt
@@ -12,7 +11,7 @@ from Backend.schemas.state_schema import DetailsAgentState
 
 class DetailsAgent:
     def __init__(self):
-        self.llm = load_llm(temperature=0.3)
+        self.llm = load_llm()
 
         self.llm_with_tools = self.llm.bind_tools([
             rag_tool, about_us_tool, check_availability_tool, get_price_tool
@@ -34,47 +33,13 @@ class DetailsAgent:
             # Run agent with invoke and capture full message history
             result = self.agent_graph.invoke({"messages": [{"role": "user", "content": user_input}]})
 
-            # print("\n==== Full message trace ====")
-            # for msg in result["messages"]:
-            #     pprint.pprint(msg)
+            return {"response_message": result}
 
-            # Extract final AI response
-            last_msg = next(
-                (m for m in reversed(result["messages"]) if isinstance(m, AIMessage) and m.content.strip()),
-                None
-            )
-
-            if last_msg:
-                return {"response_message": last_msg.content}
-            else:
-                logger.warning("No final AIMessage with content found.")
-                return {"response_message": "I wasn't able to find a helpful answer for that."}
 
         except Exception as e:
             import traceback
             logger.error("Error in DetailsAgent:\n" + traceback.format_exc())
             return {"response_message": "Something went wrong. Please try again later."}
-        #     stream = self.agent_graph.stream({"messages": [{"role": "user", "content": user_input}]})
-
-        #     final_message = None
-
-        #     for step in stream:
-        #         print("\n==== New step ====")
-        #         pprint.pprint(step)
-
-        #         if isinstance(step, (ToolMessage, AIMessage)):
-        #             final_message = step  # Save last AIMessage for return
-
-        #     if isinstance(final_message, AIMessage):
-        #         return {"response_message":final_message.content}
-
-        #     logger.warning("No AIMessage found in response stream.")
-        #     return {"response_message":"I couldn't find a clear answer for that."}
-
-        # except Exception as e:
-        #     import traceback
-        #     logger.error("DetailsAgent error:\n" + traceback.format_exc())
-        #     return {"response_message":"Something went wrong while answering your question."}
 
     def __call__(self, user_input: str) -> DetailsAgentState:
         return self.get_response(user_input)

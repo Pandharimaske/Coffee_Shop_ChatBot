@@ -1,6 +1,5 @@
 from Backend.utils.logger import logger
-from Backend.utils.util import load_llm
-from Backend.Tools.retriever_tool import vectorstore
+from Backend.utils.util import load_llm , load_vectorstore
 from Backend.schemas.state_schema import OrderInput
 from Backend.graph.states import ProductItem
 from typing import List
@@ -9,7 +8,9 @@ from typing import List
 class OrderTakingAgent:
     def __init__(self):
         self.llm = load_llm().with_structured_output(OrderInput)
+        self.vectorstore = load_vectorstore()
         logger.info("OrderAgent initialized")
+
 
     def place_order(self, order: OrderInput) -> tuple[str, list[ProductItem] , float]:
         items = order.items
@@ -20,7 +21,7 @@ class OrderTakingAgent:
 
         for item in items:
             name = item.name.strip().title()
-            results = vectorstore.similarity_search(
+            results = self.vectorstore.similarity_search(
                 query="",
                 k=1,
                 filter={"name": {"$eq": name}}
