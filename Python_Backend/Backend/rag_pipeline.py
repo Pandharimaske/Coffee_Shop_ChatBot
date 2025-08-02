@@ -3,19 +3,26 @@
 import os
 import json
 import re
-from langchain_core.prompts import PromptTemplate
 from Backend.utils.util import load_llm
-from langchain_core.output_parsers import JsonOutputParser
-from langchain_pinecone import PineconeVectorStore
 from pydantic import BaseModel, Field, validator
 from typing import Optional
-
-# ---- Pydantic model for filters ----
-
 class QueryFilters(BaseModel):
-    category: Optional[str] = None
-    max_price: Optional[float] = Field(None, ge=0, le=100)
-    min_rating: Optional[float] = Field(None, ge=0, le=5)
+    category: Optional[str] = Field(
+        None,
+        description="Category of the product, like Coffee, Tea, Snack, etc."
+    )
+    max_price: Optional[float] = Field(
+        None,
+        ge=0,
+        le=100,
+        description="Maximum price user is willing to pay, in USD."
+    )
+    min_rating: Optional[float] = Field(
+        None,
+        ge=0,
+        le=5,
+        description="Minimum acceptable product rating from 0 to 5."
+    )
 
     @validator('category')
     def clean_category(cls, v):
@@ -47,52 +54,15 @@ class CoffeeShopRAGPipeline:
         # Setup LLM for filter extraction
         self.llm_filter_extractor = load_llm()
 
-        self.filter_prompt_template = PromptTemplate.from_template("""
-You are a helpful assistant that extracts *structured filter parameters* from a user's natural language query about coffee shop products.
-
-Extract the following fields:
-
-- **category** (string or null) → e.g. "Coffee", "Tea", "Snack", etc.
-- **max_price** (float or null)
-- **min_rating** (float or null)
-
-Hints:
-
-- "cheap", "affordable", "budget" → max_price = 3.0
-- "expensive", "premium" → min_rating = 4.5, max_price = null
-- "highly rated", "top", "best" → min_rating = 4.5
-- "under X dollars", "below X", "less than X" → max_price = X
-
-If not mentioned, return null for the field.
-
-Only return valid JSON like:
-
-{{
-  "category": "Coffee",
-  "max_price": 3.0,
-  "min_rating": 4.5
-}}
-
-User query: "{query}"
-
-Extract and return JSON only.
-""")
-
     def extract_filters(self, query):
-        response = self.llm_filter_extractor.invoke(self.filter_prompt_template.format(query=query))
-        
-        try:
-            filter_data = json.loads(response.content)
-        except Exception as e:
-            print(f"Filter extraction parse error: {e}, raw response:\n{response.content}")
-            filter_data = {}
-        
-        return filter_data
+        structured_llm = self.llm_filter_extractor.with_structured_output(QueryFilters)
+        response = structured_llm.invoke(query)
 
+        return response
+    
     def postprocess_extracted_filters(self, filter_data):
         try:
-            filters_obj = QueryFilters.parse_obj(filter_data)
-            clean_filter = filters_obj.dict()
+            clean_filter = filter_data.dict()
             print("Post-processed filters (via Pydantic):", clean_filter)
             return clean_filter
         except Exception as e:
@@ -118,7 +88,7 @@ Extract and return JSON only.
     def retrieve(self, query, pinecone_filter=None):
         retriever = self.vectorstore.as_retriever(search_type="similarity", search_kwargs={
             "filter": pinecone_filter,
-            "k": 10
+            "k": 5
         })
         docs = retriever.invoke(query)
         print(f"Retrieved {len(docs)} docs.")

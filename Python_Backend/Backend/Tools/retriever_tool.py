@@ -44,7 +44,6 @@ def retrieve_coffee_docs(query: str) -> str:
         str: A formatted plain text string with product details.
     """
     docs = rag_pipeline.run_pipeline(query)
-    retrieve_coffee_docs.last_docs = docs  # optional, for DetailsAgent postprocessing
 
     result_lines = []
     for doc in docs:
