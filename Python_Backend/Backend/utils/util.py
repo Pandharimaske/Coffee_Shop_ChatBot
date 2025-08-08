@@ -1,29 +1,30 @@
 import os
 from dotenv import load_dotenv
 from langchain_groq import ChatGroq
+from langchain_openai import ChatOpenAI
 
 load_dotenv()
-
-# _llm_cache = {}
-
-# def load_llm(temperature: float = 0.0):
-#     if temperature not in _llm_cache:
-#         _llm_cache[temperature] = ChatGroq(model=os.getenv("GROQ_MODEL_NAME"), temperature=temperature)
-#     return _llm_cache[temperature]
-
-from langchain_openai import ChatOpenAI
 
 _llm_cache = {}
 
 def load_llm(temperature: float = 0.0):
     if temperature not in _llm_cache:
-        _llm_cache[temperature] = ChatOpenAI(
-            model="qwen/qwen3-coder:free",
-            temperature=temperature,
-            base_url="https://openrouter.ai/api/v1",
-            api_key=os.getenv("OPENROUTER_API_KEY")
-        )
+        _llm_cache[temperature] = ChatOpenAI(model="gpt-4o-mini" , api_key=os.getenv("OPENAI_API_KEY"))
     return _llm_cache[temperature]
+
+# from langchain_openai import ChatOpenAI
+
+# _llm_cache = {}
+
+# def load_llm(temperature: float = 0.0):
+#     if temperature not in _llm_cache:
+#         _llm_cache[temperature] = ChatOpenAI(
+#             model="qwen/qwen3-coder:free",
+#             temperature=temperature,
+#             base_url="https://openrouter.ai/api/v1",
+#             api_key=os.getenv("OPENROUTER_API_KEY")
+#         )
+#     return _llm_cache[temperature]
 
 
 from langchain_pinecone import PineconeVectorStore
