@@ -31,13 +31,13 @@ from langchain_pinecone import PineconeVectorStore
 from langchain_huggingface import HuggingFaceEmbeddings
 from pinecone import Pinecone, ServerlessSpec
 
-embedding_model = HuggingFaceEmbeddings(model_name="BAAI/bge-base-en-v1.5")
+embedding_model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
 index_name = "coffee-products"
 if index_name not in pc.list_indexes().names():
     pc.create_index(
         index_name,
-        dimension=768,
+        dimension=384,
         metric="cosine",
         spec=ServerlessSpec(cloud="aws", region="us-east-1")
     )
