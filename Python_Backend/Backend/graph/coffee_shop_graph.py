@@ -4,8 +4,8 @@ from Backend.nodes.gaurd_node import GuardNode
 from Backend.nodes.classification_node import ClassificationNode
 from Backend.nodes.details_node import DetailsAgentNode
 from Backend.nodes.order_node import OrderAgentNode
-from Backend.nodes.recommendation_node import RecommendationAgentNode
-from Backend.agents.reccomendation_agent import RecommendationAgent
+# from Backend.nodes.recommendation_node import RecommendationAgentNode
+# from Backend.agents.reccomendation_agent import RecommendationAgent
 from Backend.nodes.update_order_node import UpdateOrderAgentNode
 from Backend.nodes.response_node import ResponseNode
 from Backend.nodes.memory_node import MemoryNode
@@ -30,11 +30,11 @@ def build_coffee_shop_graph():
     builder.add_node("chat_summary", SummaryNode())
     builder.add_node("query_rewrite", QueryRewriterNode())
 
-    recommendation_agent = RecommendationAgent(
-        apriori_recommendation_path="Backend/Data/apriori_recommendations.json",
-        popular_recommendation_path="Backend/Data/popularity_recommendation.csv"
-    )
-    builder.add_node("recommend", RecommendationAgentNode(recommendation_agent))
+    # recommendation_agent = RecommendationAgent(
+    #     apriori_recommendation_path="Backend/Data/apriori_recommendations.json",
+    #     popular_recommendation_path="Backend/Data/popularity_recommendation.csv"
+    # )
+    # builder.add_node("recommend", RecommendationAgentNode(recommendation_agent))
 
     # Entry
     builder.set_entry_point("query_rewrite")
@@ -61,14 +61,14 @@ def build_coffee_shop_graph():
     builder.add_conditional_edges("classify", classify_router, {
         "details_agent": "details",
         "order_taking_agent": "take_order",
-        "recommendation_agent": "recommend",
+        # "recommendation_agent": "recommend",
         "update_order_agent": "update_order"
     })
 
     # Step 4: Agent responses to final
     builder.add_edge("details", "final_response")
     builder.add_edge("take_order", "final_response")
-    builder.add_edge("recommend", "final_response")
+    # builder.add_edge("recommend", "final_response")
     builder.add_edge("update_order", "final_response")
     builder.add_edge("final_response" , "chat_summary")
     builder.add_edge("chat_summary", END)

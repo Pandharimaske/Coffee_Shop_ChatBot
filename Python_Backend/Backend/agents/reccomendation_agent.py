@@ -2,8 +2,7 @@ import os
 import json
 import pandas as pd
 from copy import deepcopy
-from dotenv import load_dotenv
-from langchain_groq import ChatGroq
+from dotenv import load_dotenvq
 
 from Backend.prompts.reccomendation_prompt import classification_prompt, response_prompt
 
@@ -11,11 +10,6 @@ load_dotenv()
 
 class RecommendationAgent:
     def __init__(self, apriori_recommendation_path, popular_recommendation_path):
-        self.client = ChatGroq(
-            model_name=os.getenv("GROQ_MODEL_NAME"),
-            temperature=0.2,
-            groq_api_key=os.getenv("GROQ_API_KEY")
-        )
 
         # Load recommendation data
         with open(apriori_recommendation_path, 'r') as file:
