@@ -1,7 +1,6 @@
 from typing import List
 from pydantic import BaseModel, Field
 from langchain_core.messages import BaseMessage, SystemMessage, HumanMessage, AIMessage
-from langchain_groq import ChatGroq
 from langchain.prompts import ChatPromptTemplate
 from langchain.prompts.chat import SystemMessagePromptTemplate, HumanMessagePromptTemplate
 from Backend.utils.util import load_llm
@@ -9,7 +8,7 @@ from Backend.utils.util import load_llm
 
 class ConversationSummaryMemory(BaseModel):
     summary: str = ""
-    llm: ChatGroq = Field(default_factory=lambda: load_llm())
+    llm = load_llm()
 
     def add_messages(self, messages: List[BaseMessage]) -> None:
         """Summarize the new messages along with existing summary and update internal state."""
