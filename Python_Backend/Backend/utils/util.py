@@ -28,16 +28,20 @@ def load_llm(temperature: float = 0.0):
 
 
 from langchain_pinecone import PineconeVectorStore
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
+import os
 from pinecone import Pinecone, ServerlessSpec
 
-embedding_model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+embedding_model = GoogleGenerativeAIEmbeddings(
+    model="models/embedding-001",
+    google_api_key=os.getenv("GEMINI_API_KEY")
+)
 pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
 index_name = "coffee-products"
 if index_name not in pc.list_indexes().names():
     pc.create_index(
         index_name,
-        dimension=384,
+        dimension=768,
         metric="cosine",
         spec=ServerlessSpec(cloud="aws", region="us-east-1")
     )
