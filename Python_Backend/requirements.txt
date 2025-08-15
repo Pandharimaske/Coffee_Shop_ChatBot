@@ -13,3 +13,4 @@ uvicorn==0.35.0
 python-dotenv
 gunicorn
 httpx
+pandas==2.3.1
