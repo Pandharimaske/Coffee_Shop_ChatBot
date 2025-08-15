@@ -1,6 +1,5 @@
 import os
 from dotenv import load_dotenv
-# from langchain_groq import ChatGroq
 from langchain_openai import ChatOpenAI
 
 load_dotenv()
@@ -30,6 +29,7 @@ def load_llm(temperature: float = 0.0):
 from langchain_pinecone import PineconeVectorStore
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 import os
+from dotenv import load_dotenv
 from pinecone import Pinecone, ServerlessSpec
 
 embedding_model = GoogleGenerativeAIEmbeddings(

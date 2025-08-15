@@ -8,7 +8,7 @@ from Backend.utils.util import load_llm
 
 class ConversationSummaryMemory(BaseModel):
     summary: str = ""
-    llm = load_llm()
+    llm = Field(default_factory=lambda: load_llm())
 
     def add_messages(self, messages: List[BaseMessage]) -> None:
         """Summarize the new messages along with existing summary and update internal state."""
