@@ -10,8 +10,8 @@ class GuardNode(Runnable):
 
     def invoke(self, state: CoffeeAgentState, config=None) -> CoffeeAgentState:
         result = self.agent(state)
-        state["decision"] = result["decision"]
-        state["response_message"] = result["response_message"]
-        state["memory_node"] = result["memory_node"]
-
-        return CoffeeAgentState(**state)
+        return result
+        # state["decision"] = result["decision"]
+        # state["response_message"] = result["response_message"]
+        # state["memory_node"] = result["memory_node"]
+        # return CoffeeAgentState(**state)

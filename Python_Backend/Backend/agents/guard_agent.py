@@ -35,6 +35,7 @@ class GuardAgent:
             return {
                 "decision": "not allowed",
                 "response_message": "Something went wrong. Can I help you with something else?",
+                "memory_node": False
             }
 
     def __call__(self, state:CoffeeAgentState) -> GuardAgentState:

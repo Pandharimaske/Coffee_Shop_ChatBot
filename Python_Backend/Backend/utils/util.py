@@ -24,7 +24,7 @@ def openai_gpt4o(**kwargs):
 
 def google_gemini(**kwargs):
     """Google Gemini 2.5 Pro"""
-    return ChatGoogleGenerativeAI(model="gemini-2.5-pro", **kwargs)
+    return ChatGoogleGenerativeAI(model="gemini-2.5-pro",api_key = os.getenv("GEMINI_API_KEY"), **kwargs)
 
 def openrouter_qwen(**kwargs):
     """OpenRouter Qwen (72B instruct as example)"""
