@@ -2,13 +2,12 @@ from langchain_core.runnables import Runnable
 from langchain_core.messages import HumanMessage, AIMessage
 from Backend.graph.states import CoffeeAgentState
 from Backend.prompts.response_prompt import refinement_prompt
-from Backend.utils.util import load_llm
+from Backend.utils.util import call_llm
 from Backend.utils.summary_memory import save_messages , save_order
 
 class ResponseNode(Runnable):
     def __init__(self):
-        self.llm = load_llm()
-        self.chain = refinement_prompt | self.llm
+        pass
 
     def invoke(self , state: CoffeeAgentState , config=None) -> CoffeeAgentState:
 
@@ -20,7 +19,9 @@ class ResponseNode(Runnable):
             "state": str(state)
         }
 
-        refined_response = self.chain.invoke(inputs).content
+        prompt = refinement_prompt.invoke(inputs)
+        refined_response = call_llm(prompt=prompt).content
+
         state["response_message"] = refined_response
         state["messages"] = [HumanMessage(content=state["user_input"]),AIMessage(content=state["response_message"])] + state["messages"]
 
