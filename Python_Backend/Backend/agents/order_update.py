@@ -1,20 +1,19 @@
 from Backend.schemas.state_schema import OrderUpdateState
 from Backend.graph.states import CoffeeAgentState
 from Backend.utils.logger import logger
-from Backend.utils.util import load_llm , load_vectorstore
+from Backend.utils.util import call_llm , load_vectorstore
 
 
 
 # ---- Order Update Agent Class ----
 class OrderUpdateAgent:
     def __init__(self):
-        self.llm = load_llm().with_structured_output(OrderUpdateState)
         self.vectorstore = load_vectorstore()
         logger.info("OrderUpdateAgent initialized")
 
 
     def update_order(self , state: CoffeeAgentState) -> CoffeeAgentState:
-        update_input = self.llm.invoke(state["user_input"])
+        update_input = call_llm(prompt=state["user_input"] , schema=OrderUpdateState)
         print(update_input)
 
         logger.debug(f"🔍 Parsed updates: {update_input.updates}")

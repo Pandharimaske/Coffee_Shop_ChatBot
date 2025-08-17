@@ -2,7 +2,7 @@ import os
 import json
 import pandas as pd
 from copy import deepcopy
-from dotenv import load_dotenvq
+from dotenv import load_dotenv
 
 from Backend.prompts.reccomendation_prompt import classification_prompt, response_prompt
 

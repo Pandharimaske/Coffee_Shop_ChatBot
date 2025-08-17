@@ -1,5 +1,5 @@
 from Backend.utils.logger import logger
-from Backend.utils.util import load_llm , load_vectorstore
+from Backend.utils.util import call_llm , load_vectorstore
 from Backend.schemas.state_schema import OrderInput
 from Backend.graph.states import ProductItem
 from typing import List
@@ -7,7 +7,6 @@ from typing import List
 # ---- Agent Class ----
 class OrderTakingAgent:
     def __init__(self):
-        self.llm = load_llm().with_structured_output(OrderInput)
         self.vectorstore = load_vectorstore()
         logger.info("OrderAgent initialized")
 
@@ -60,7 +59,7 @@ class OrderTakingAgent:
     def get_response(self, user_input: str) -> dict:
         try:
             logger.info(f"User input: {user_input}")
-            parsed_order = self.llm.invoke(user_input)
+            parsed_order = call_llm(prompt=user_input , schema=OrderInput)
             print(parsed_order)
             logger.info(f"Parsed order: {parsed_order}")
             summary, filtered_order , total = self.place_order(parsed_order)
