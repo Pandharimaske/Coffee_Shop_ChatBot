@@ -26,10 +26,6 @@ def google_gemini(**kwargs):
     """Google Gemini 2.5 Pro"""
     return ChatGoogleGenerativeAI(model="gemini-2.5-pro", **kwargs)
 
-def groq_llama(**kwargs):
-    """Groq LLaMA 3.3 70B Versatile"""
-    return ChatGroq(model="llama-3.3-70b-versatile", **kwargs)
-
 def openrouter_qwen(**kwargs):
     """OpenRouter Qwen (72B instruct as example)"""
     return ChatOpenAI(model="openai/gpt-oss-20b:free",base_url="https://openrouter.ai/api/v1", api_key=os.getenv("OPENROUTER_API_KEY") , **kwargs)
@@ -38,7 +34,6 @@ def openrouter_qwen(**kwargs):
 # ---- Default stack (priority order) ----
 DEFAULT_MODELS = [
     openai_gpt4o,
-    groq_llama,
     google_gemini,
     openrouter_qwen,
 ]
