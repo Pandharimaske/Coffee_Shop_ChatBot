@@ -15,6 +15,8 @@ class QueryRewriterNode(Runnable):
         )
 
     def invoke(self, state: CoffeeAgentState, config=None) -> CoffeeAgentState:
+
+        user_input = state["user_input"]
         
         prompt = query_rewrite_prompt.invoke({
             "user_input": state["user_input"] , 
@@ -24,5 +26,5 @@ class QueryRewriterNode(Runnable):
             "state": str(state)
         })
         rewritten = call_llm(prompt=prompt)
-        state["user_input"] = rewritten.content.strip()
+        state["user_input"] = if rewritten.content.strip() else user_input
         return state
