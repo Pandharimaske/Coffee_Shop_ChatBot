@@ -17,6 +17,14 @@ def load_llm(temperature: float = 0.0):
         _llm_cache[temperature] = ChatGroq(model="llama-3.3-70b-versatile" , api_key=os.getenv("GROQ_API_KEY"))
     return _llm_cache[temperature]
 
+
+async def call_llm_stream(prompt, temperature: float = 0.0):
+    llm = load_llm(temperature)   # ✅ fetch from cache
+    async for chunk in llm.astream(prompt):
+        if chunk.content:
+            yield chunk.content
+
+
 # ---- Model Factories ----
 def openai_gpt4o(**kwargs):
     """OpenAI GPT-4o-mini"""

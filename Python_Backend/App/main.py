@@ -32,10 +32,30 @@ def health():
     return {"status": "ok"}
 
 # Main chat endpoint (used by web frontend or testing)
-@app.post("/chat", response_model=ChatResponse)
-def chat(request: ChatRequest):
-    result = get_bot_response(request.user_input, request.user_id)
-    return ChatResponse(**result)
+# @app.post("/chat", response_model=ChatResponse)
+# def chat(request: ChatRequest):
+#     state = get_bot_response(request.user_input, request.user_id)
+#     result = {
+#             "response": state.get("response_message", "Sorry, I can't help with that."),
+#             "state": state
+#         }
+#     return ChatResponse(**result)
+
+from fastapi.responses import StreamingResponse
+from Backend.nodes.response_node import ResponseNode
+
+response_node = ResponseNode()
+
+@app.post("/chat/stream")
+async def chat_stream(request: ChatRequest):
+    async def event_generator():
+        state = get_bot_response(request.user_input, request.user_id)
+        async for chunk in response_node.astream(state, config={"configurable": {"user_id": request.user_id}}):
+            yield f"data: {chunk}\n\n"
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
 
 # 🔁 Telegram webhook route
 @app.post("/telegram-webhook")

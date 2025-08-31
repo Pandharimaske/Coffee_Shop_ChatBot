@@ -6,19 +6,6 @@ class RecommendationAgentNode(Runnable):
 
     def invoke(self, state: CoffeeAgentState, config=None) -> CoffeeAgentState:
         user_input = state.get("user_input" , "")
+        recommendations = self.recommendation_agent.get_popular_recommendation(user_input=user_input) 
 
-        return {
-                "response_message": "recommendation agent not working please try again later."
-            }
-
-
-        if not user_input:
-            return {
-                "response_message": "No user message provided to generate a recommendation."
-            }
-
-        response = self.recommendation_agent.get_response(user_input)
-
-        return {
-            "response_message": response
-        }
+        return {"response_message":f"Popular Recommendation: {recommendations}"}

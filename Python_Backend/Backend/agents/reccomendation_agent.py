@@ -1,13 +1,7 @@
-import os
 import json
 import pandas as pd
-from copy import deepcopy
-from dotenv import load_dotenv
-
-from Backend.prompts.reccomendation_prompt import classification_prompt, response_prompt
-
-load_dotenv()
-
+from Backend.schemas.agents_schemas import CategoryPrediction
+from Backend.utils.util import call_llm
 class RecommendationAgent:
     def __init__(self, apriori_recommendation_path, popular_recommendation_path):
 
@@ -19,11 +13,7 @@ class RecommendationAgent:
         self.products = self.popular_recommendations['product'].tolist()
         self.product_categories = self.popular_recommendations['product_category'].tolist()
 
-        # Chains
-        self.classification_chain = classification_prompt | self.client
-        self.response_chain = response_prompt | self.client
-
-    def get_apriori_recommendation(self, products, top_k=5):
+    def get_apriori_recommendation(self, products, top_k=3):
         recommendation_list = []
         for product in products:
             if product in self.apriori_recommendations:
@@ -49,72 +39,14 @@ class RecommendationAgent:
 
         return recommendations
 
-    def get_popular_recommendation(self, product_categories=None, top_k=5):
-        df = self.popular_recommendations
-        if isinstance(product_categories, str):
+    def get_popular_recommendation(self, user_input:str , top_k:int =5):
+        product_categories = call_llm(prompt=user_input , schema=CategoryPrediction).category.value
+        print(product_categories)
+        recommendation_df = self.popular_recommendations
+        
+        if product_categories != "General":
             product_categories = [product_categories]
+            recommendation_df = recommendation_df[recommendation_df['product_category'].isin(product_categories)]
 
-        if product_categories:
-            df = df[df['product_category'].isin(product_categories)]
-
-        df = df.sort_values(by='number_of_transactions', ascending=False)
-        return df['product'].tolist()[:top_k] if not df.empty else []
-
-    def recommendation_classification(self, messages):
-        if isinstance(messages, str):
-            messages = [{"role": "user", "content": messages}]
-
-        response = self.classification_chain.invoke({
-            "input": messages[-1]['content'],
-            "products": ", ".join(self.products),
-            "categories": ", ".join(self.product_categories)
-        })
-
-        try:
-            parsed = json.loads(response)
-            return {
-                "recommendation_type": parsed.get("recommendation_type"),
-                "parameters": parsed.get("parameters", [])
-            }
-        except json.JSONDecodeError:
-            return {
-                "recommendation_type": None,
-                "parameters": []
-            }
-
-    def get_response(self, messages):
-        if isinstance(messages, str):
-            messages = [{"role": "user", "content": messages}]
-        else:
-            messages = deepcopy(messages)
-
-        classification = self.recommendation_classification(messages)
-        recommendation_type = classification.get('recommendation_type')
-        parameters = classification.get('parameters', [])
-
-        if recommendation_type == "apriori":
-            recommendations = self.get_apriori_recommendation(parameters)
-        elif recommendation_type == "popular":
-            recommendations = self.get_popular_recommendation()
-        elif recommendation_type == "popular by category":
-            recommendations = self.get_popular_recommendation(parameters)
-        else:
-            recommendations = []
-
-        if not recommendations:
-            return {
-                "role": "assistant",
-                "content": "Sorry, I can't help with that. Can I help you with your order?",
-                "memory": {"agent": "recommendation_agent"}
-            }
-
-        response = self.response_chain.invoke({
-            "input": messages[-1]['content'],
-            "recommendations": ", ".join(recommendations)
-        })
-
-        return {
-            "role": "assistant",
-            "content": response,
-            "memory": {"agent": "recommendation_agent"}
-        }
+        recommendation_df = recommendation_df.sort_values(by='number_of_transactions', ascending=False)
+        return recommendation_df['product'].tolist()[:top_k] if not recommendation_df.empty else []

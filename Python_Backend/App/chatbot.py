@@ -51,14 +51,9 @@ def get_bot_response(user_input: str, user_id: int) -> dict:
 
         state = graph.invoke(state, config=config)
 
-        return {
-            "response": state.get("response_message", "Sorry, I can't help with that."),
-            "state": state
-        }
+        return state
 
     except Exception as e:
         logger.error(f"Graph invocation failed: {e}")
-        return {
-            "response": "Something went wrong. Please try again later.",
-            "state": state or {}
-        }
+        return state or {}
+    

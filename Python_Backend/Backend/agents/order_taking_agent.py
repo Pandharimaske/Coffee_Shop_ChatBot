@@ -11,9 +11,10 @@ class OrderTakingAgent:
         logger.info("OrderAgent initialized")
 
 
-    def place_order(self, order: OrderInput) -> tuple[str, list[ProductItem] , float]:
+    def place_order(self, order: OrderInput) -> tuple[str, list[ProductItem] , list[str] , float]:
         items = order.items
-        available_items: List[ProductItem] = []
+        ordered_items: List[ProductItem] = []
+        available_items: List[str] = []
         unavailable_items = []
         total = 0
         summary_lines = []
@@ -30,12 +31,13 @@ class OrderTakingAgent:
                 doc = results[0]
                 price = doc.metadata.get("price", 0.0)
                 line_total = item.quantity * price
-                available_items.append({
+                ordered_items.append({
                     "name": item.name,
                     "quantity": item.quantity,
                     "per_unit_price": price,
                     "total_price": line_total
                 })
+                available_items.append(item.name)
                 total += line_total
                 summary_lines.append(f"✅ {name} x {item.quantity} @ ${price} = ${line_total}")
             else:
@@ -53,7 +55,7 @@ class OrderTakingAgent:
         else:
             summary += f"\n\nTotal: ${total}\nShall I place the order?"
 
-        return summary, available_items , total
+        return summary, ordered_items, available_items , total
 
 
     def get_response(self, user_input: str) -> dict:
@@ -62,17 +64,20 @@ class OrderTakingAgent:
             parsed_order = call_llm(prompt=user_input , schema=OrderInput)
             print(parsed_order)
             logger.info(f"Parsed order: {parsed_order}")
-            summary, filtered_order , total = self.place_order(parsed_order)
+            summary, ordered_items , available_items , total = self.place_order(parsed_order)
 
             return {
-                "order": filtered_order,
+                "order": ordered_items,
                 "response_message": summary , 
-                "final_price": total
+                "final_price": total , 
+                "available_items": available_items
             }
+        
         except Exception as e:
             logger.error(f"OrderAgent error: {e}")
             return {
                 "order": [],
                 "response_message": "Sorry, I couldn’t process your order. Could you please rephrase it?",
-                "final_price": 0
+                "final_price": 0 , 
+                "available_items": []
             }

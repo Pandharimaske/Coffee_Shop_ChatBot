@@ -17,11 +17,23 @@ class AgentType(str, Enum):
     update_order_agent = "update_order_agent"
 
 
-class RecommendationTypeEnum(str, Enum):
-    apriori = "apriori"
-    popular = "popular"
-    popular_by_category = "popular by category"
 
+class CategoryEnum(str, Enum):
+    coffee = "Coffee"
+    bakery = "Bakery"
+    drinking_chocolate = "Drinking Chocolate"
+    flavours = "Flavours"
+    general = "General"  # ✅ fallback instead of None/Unknown
+
+class CategoryPrediction(BaseModel):
+    category: CategoryEnum = Field(
+        ...,
+        description=(
+            "The main category of the item mentioned by the user. "
+            "Must be one of: Coffee, Bakery, Drinking Chocolate, Flavours, General. "
+            "Use 'General' if the input does not clearly match any category."
+        )
+    )
 
 # ---------------- Schemas ---------------- #
 class GuardDecision(BaseModel):
@@ -44,11 +56,3 @@ class AgentDecision(BaseModel):
     """Schema for routing the query to the appropriate agent."""
     target_agent: AgentType = Field(..., description="The chosen agent to handle the input")
     response_message: Optional[str] = Field(default="", description="Optional response message to the user")
-
-
-class RecommendationType(BaseModel):
-    """Schema defining the type and parameters of product recommendation."""
-    recommendation_type: RecommendationTypeEnum = Field(
-        ..., description="Type of recommendation"
-    )
-    parameters: List[str] = Field(description="List of items or categories for recommendations")
