@@ -62,64 +62,74 @@ const Chatbot = () => {
     }
   }, [messages, isTyping]);
 
-  const handleSendMessage = async () => {
-    let message = textRef.current.trim();
-    if (!message) return;
-
-    const userMessage = {
-      content: message,
-      role: "user",
-      timestamp: new Date(),
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
-    textRef.current = "";
-    if (inputRef.current) inputRef.current.value = "";
-    setIsTyping(true);
-
-    try {
-      const response = await fetch(
-        "https://coffee-shop-chatbot.onrender.com/chat",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            user_input: message,
-            user_id: "1",
-          }),
-        }
-      );
-
-      if (!response.ok)
-        throw new Error(`HTTP error! status: ${response.status}`);
-
-      const data = await response.json();
-      setIsTyping(false);
-
-      setMessages((prev) => [
-        ...prev,
-        {
-          content: data.response,
-          role: "bot",
-          timestamp: new Date(),
-        },
-      ]);
-    } catch (err) {
-      console.error("Error sending message:", err);
-      setIsTyping(false);
-      console.log("err", err);
-      setMessages((prev) => [
-        ...prev,
-        {
-          content: "⚠️ Oops! Something went wrong. Please try again.",
-          role: "bot",
-          timestamp: new Date(),
-        },
-      ]);
-    }
+const handleSendMessage = async () => {
+  let message = textRef.current.trim();
+  if (!message) return;
+  
+  const userMessage = {
+    content: message,
+    role: "user",
+    timestamp: new Date(),
   };
+  
+  setMessages((prev) => [...prev, userMessage]);
+  textRef.current = "";
+  if (inputRef.current) inputRef.current.value = "";
+  setIsTyping(true);
+  
+  try {
+    const eventSource = new EventSource(
+      `https://coffee-shop-chatbot.onrender.com/chat/stream?user_input=${encodeURIComponent(
+        message
+      )}&user_id=1`
+    );
+  
+    let botMessage = { content: "", role: "bot", timestamp: new Date() };
+    setMessages((prev) => [...prev, botMessage]);
+  
+    eventSource.onmessage = (event) => {
+      if (event.data === "[DONE]") {
+        eventSource.close();
+        setIsTyping(false);
+      } else {
+          // Append streamed chunk
+        setMessages((prev) => {
+          const updated = [...prev];
+          updated[updated.length - 1] = {
+            ...botMessage,
+            content: updated[updated.length - 1].content + event.data,
+          };
+          return updated;
+        });
+      }
+    };
+  
+    eventSource.onerror = (err) => {
+      console.error("SSE error:", err);
+      eventSource.close();
+      setIsTyping(false);
+      setMessages((prev) => [
+        ...prev,
+        {
+          content: "⚠️ Oops! Streaming failed. Please try again.",
+          role: "bot",
+          timestamp: new Date(),
+        },
+      ]);
+    };
+  } catch (err) {
+    console.error("Error sending message:", err);
+    setIsTyping(false);
+    setMessages((prev) => [
+      ...prev,
+      {
+        content: "⚠️ Oops! Something went wrong. Please try again.",
+        role: "bot",
+        timestamp: new Date(),
+      },
+    ]);
+  }
+};
 
   // Format time
 
