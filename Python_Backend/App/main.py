@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import httpx
 import os
 from dotenv import load_dotenv
+import asyncio
 load_dotenv()
 
 # Load Telegram token (set this in Render environment variables)
@@ -49,24 +50,33 @@ response_node = ResponseNode()
 @app.get("/chat/stream")
 async def chat_stream(user_input: str, user_id: str):
     async def event_generator():
-        # Get agent state using your existing helper
+        # 🔹 1. Heartbeat immediately (prevents Render idle-kill before first chunk)
+        yield "data: \n\n"
+        await asyncio.sleep(0)
+
+        # 🔹 2. Get agent state
         state = get_bot_response(user_input, user_id)
 
+        # 🔹 3. Stream chunks from ResponseNode
         async for chunk in response_node.astream(
             state,
             config={"configurable": {"user_id": user_id}},
         ):
+            # Flush small chunks quickly
             yield f"data: {chunk}\n\n"
+            await asyncio.sleep(0)  # lets event loop flush immediately
 
-        # Indicate end of stream
+        # 🔹 4. Indicate end of stream
         yield "data: [DONE]\n\n"
 
     return StreamingResponse(
         event_generator(),
         media_type="text/event-stream",
-        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",  # prevents proxy buffering
+        },
     )
-
 
 # 🔁 Telegram webhook route
 @app.post("/telegram-webhook")
