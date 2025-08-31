@@ -47,14 +47,25 @@ from Backend.nodes.response_node import ResponseNode
 response_node = ResponseNode()
 
 @app.get("/chat/stream")
-async def chat_stream(request: ChatRequest):
+async def chat_stream(user_input: str, user_id: str):
     async def event_generator():
-        state = get_bot_response(request.user_input, request.user_id)
-        async for chunk in response_node.astream(state, config={"configurable": {"user_id": request.user_id}}):
+        # Get agent state using your existing helper
+        state = get_bot_response(user_input, user_id)
+
+        async for chunk in response_node.astream(
+            state,
+            config={"configurable": {"user_id": user_id}},
+        ):
             yield f"data: {chunk}\n\n"
+
+        # Indicate end of stream
         yield "data: [DONE]\n\n"
 
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
+    )
 
 
 # 🔁 Telegram webhook route
