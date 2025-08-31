@@ -46,7 +46,7 @@ from Backend.nodes.response_node import ResponseNode
 
 response_node = ResponseNode()
 
-@app.post("/chat/stream")
+@app.get("/chat/stream")
 async def chat_stream(request: ChatRequest):
     async def event_generator():
         state = get_bot_response(request.user_input, request.user_id)
