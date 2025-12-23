@@ -5,7 +5,7 @@ langchain_openai==0.3.28
 langchain_google_genai==2.1.8
 langchain_groq==0.3.2
 langchain_pinecone==0.2.8
-langchain-huggingface==1.2.0
+langchain-huggingface<1.0.0
 langgraph==0.5.2
 pinecone==7.3.0
 pydantic==2.11.7
