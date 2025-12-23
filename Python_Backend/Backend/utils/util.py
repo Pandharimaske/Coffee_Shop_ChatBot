@@ -110,16 +110,18 @@ def call_llm(
 
 
 
+from langchain_huggingface import HuggingFaceEndpointEmbeddings
 from langchain_pinecone import PineconeVectorStore
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
 import os
 from dotenv import load_dotenv
 from pinecone import Pinecone, ServerlessSpec
 
-embedding_model = GoogleGenerativeAIEmbeddings(
-    model="models/embedding-001",
-    google_api_key=os.getenv("GEMINI_API_KEY")
+embedding_model =  HuggingFaceEndpointEmbeddings(
+    model=os.getenv("EMBEDDING_MODEL") , 
+    huggingfacehub_api_token=os.getenv("HF_API_KEY")
 )
+
+
 pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
 index_name = "coffee-products"
 if index_name not in pc.list_indexes().names():
