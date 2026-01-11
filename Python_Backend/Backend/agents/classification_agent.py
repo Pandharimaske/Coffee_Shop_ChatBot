@@ -12,24 +12,50 @@ class ClassificationAgent:
     def __init__(self):
         logger.info("ClassificationAgent initialized")
 
-    def get_response(self, user_input: str) -> ClassificationAgentState:
+    def get_response(self, user_input: str, state: dict) -> ClassificationAgentState:
+        """
+        Classify user input to appropriate agent.
+        
+        Args:
+            user_input: The user's query
+            state: Current conversation state (includes order, chat_summary, etc.)
+        """
         try:
-            logger.debug(f"Invoking classification chain with input: {user_input}")
-            prompt = classification_prompt.invoke({"user_input": user_input})
-            result = call_llm(prompt=prompt , schema=AgentDecision)
+            # Extract order status
+            order = state.get("order", None)
+            if order and isinstance(order, dict) and len(order.get("items", [])) > 0:
+                order_status = f"Order exists with {len(order['items'])} items"
+            else:
+                order_status = "No order"
+            
+            # Extract context
+            context = state.get("chat_summary", "")
+            
+            logger.debug(f"Classifying input: {user_input} | Order: {order_status}")
+            
+            # Invoke prompt with all required variables
+            prompt = classification_prompt.invoke({
+                "user_input": user_input,
+                "order_status": order_status,
+                "context": context
+            })
+            
+            # Call LLM
+            result = call_llm(prompt=prompt, schema=AgentDecision)
             logger.debug(f"Classification result: {result}")
+            
             return {
                 "target_agent": result.target_agent,
-                "response_message": result.response_message or "Got it. What would you like to know next?",
+                "response_message": result.response_message or "",
             }
 
         except Exception as e:
             import traceback
             logger.error("ClassificationAgent error:\n" + traceback.format_exc())
             return {
-                "target_agent": "unknown",
-                "response_message": "Something went wrong while classifying. Please try again.",
+                "target_agent": "details_agent",  # Safe fallback
+                "response_message": "",
             }
 
-    def __call__(self, user_input: str) -> ClassificationAgentState:
-        return self.get_response(user_input)
+    def __call__(self, user_input: str, state: dict) -> ClassificationAgentState:
+        return self.get_response(user_input, state)

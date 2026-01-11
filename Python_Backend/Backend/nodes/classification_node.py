@@ -7,14 +7,15 @@ class ClassificationNode(Runnable):
         self.agent = ClassificationAgent()
 
     def invoke(self, state: CoffeeAgentState, config=None) -> CoffeeAgentState:
-        user_input = state["user_input"]
+        user_input = state.get("user_input")
         if not user_input:
             raise ValueError("Missing 'user_input' in state")
         
-        result = self.agent.get_response(user_input)
+        # Pass the entire state to the agent
+        result = self.agent.get_response(user_input, state)
 
+        # Update state with classification results
         state["target_agent"] = result["target_agent"]
         state["response_message"] = result["response_message"]
 
-        return CoffeeAgentState(**state)
-    
+        return state  # Return updated state directly
