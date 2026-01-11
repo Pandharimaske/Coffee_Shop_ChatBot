@@ -61,45 +61,42 @@ guard_prompt = ChatPromptTemplate.from_messages([
 
 Return ONLY valid JSON with this exact structure:
 
-{
+{{
   "decision": "allowed or not allowed",
   "response_message": "message or empty string",
   "memory_node": true or false
-}
+}}
 
 ---
 
 **Examples:**
 
 User: "Hi"
-Output: {"decision": "allowed", "response_message": "", "memory_node": false}
+Output: {{"decision": "allowed", "response_message": "", "memory_node": false}}
+
+User: "What do you have?"
+Output: {{"decision": "allowed", "response_message": "", "memory_node": false}}
 
 User: "My name is Sarah"
-Output: {"decision": "allowed", "response_message": "", "memory_node": true}
+Output: {{"decision": "allowed", "response_message": "", "memory_node": true}}
 
 User: "I don't like sweet drinks"
-Output: {"decision": "allowed", "response_message": "", "memory_node": true}
+Output: {{"decision": "allowed", "response_message": "", "memory_node": true}}
+
+User: "What's my name?"
+Output: {{"decision": "allowed", "response_message": "", "memory_node": false}}
+
+User: "I want a latte"
+Output: {{"decision": "allowed", "response_message": "", "memory_node": false}}
 
 User: "What's the weather?"
-Output: {"decision": "not allowed", "response_message": "I'm here to help with coffee orders and menu questions. What can I get you today?", "memory_node": false}
+Output: {{"decision": "not allowed", "response_message": "I'm here to help with coffee orders and menu questions. What can I get you today?", "memory_node": false}}
 
 User: "Tell me a joke"
-Output: {"decision": "not allowed", "response_message": "I can't help with that, but I'd love to take your coffee order!", "memory_node": false}
-
-User: "Thanks!"
-Output: {"decision": "allowed", "response_message": "", "memory_node": false}
-
-User: "I'm allergic to nuts"
-Output: {"decision": "allowed", "response_message": "", "memory_node": true}
-
-User: "What did I order last time?"
-Output: {"decision": "allowed", "response_message": "", "memory_node": false}
-
-User: "Forget my nut allergy"
-Output: {"decision": "allowed", "response_message": "", "memory_node": true}
+Output: {{"decision": "not allowed", "response_message": "I can't help with that, but I'd love to take your coffee order!", "memory_node": false}}
 
 User: "I also dislike cinnamon"
-Output: {"decision": "allowed", "response_message": "", "memory_node": true}
+Output: {{"decision": "allowed", "response_message": "", "memory_node": true}}
 
 ---
 

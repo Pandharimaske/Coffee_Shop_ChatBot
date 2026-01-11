@@ -91,14 +91,6 @@ User: "Hi"
 Context: No order
 Output: {"target_agent": "details_agent", "response_message": ""}
 
-User: "What do you have?"
-Context: No order
-Output: {"target_agent": "details_agent", "response_message": ""}
-
-User: "I want a cappuccino"
-Context: No order
-Output: {"target_agent": "order_taking_agent", "response_message": ""}
-
 User: "I want a cappuccino"
 Context: Order exists with 1 latte
 Output: {"target_agent": "update_order_agent", "response_message": ""}
@@ -111,29 +103,6 @@ User: "Add 2 lattes"
 Context: Order exists with 1 cappuccino
 Output: {"target_agent": "update_order_agent", "response_message": ""}
 
-User: "What do you recommend?"
-Context: Any
-Output: {"target_agent": "recommendation_agent", "response_message": ""}
-
-User: "Remove the cappuccino"
-Context: Order exists
-Output: {"target_agent": "update_order_agent", "response_message": ""}
-
-User: "How much is a latte?"
-Context: Any
-Output: {"target_agent": "details_agent", "response_message": ""}
-
-User: "Make it 3 instead"
-Context: Order exists with 2 cappuccinos
-Output: {"target_agent": "update_order_agent", "response_message": ""}
-
-User: "Cancel my order"
-Context: Order exists
-Output: {"target_agent": "update_order_agent", "response_message": ""}
-
-User: "What are your hours?"
-Context: Any
-Output: {"target_agent": "details_agent", "response_message": ""}
 
 User: "I can't decide"
 Context: No order
@@ -157,10 +126,10 @@ Output: {"target_agent": "details_agent", "response_message": ""}
 
 Return ONLY valid JSON:
 
-{
+{{
   "target_agent": "agent_name",
   "response_message": "optional clarification or empty string"
-}
+}}
 
 ---
 

@@ -55,23 +55,16 @@ memory_update_prompt = ChatPromptTemplate.from_messages([
 **replace**: Completely replace an array (use sparingly, only when user is explicit)
 
 ---
-
 **Output Format:**
-```json
-{
-  "add_or_update": {
+
+{{
+  "add_or_update": {{
     "name": "Sarah",
-    "likes": ["oat milk", "strong coffee"],
-    "dislikes": ["sweet drinks"]
-  },
-  "remove": {
-    "dislikes": ["dairy"]
-  },
-  "replace": {
-    "allergies": ["nuts", "soy"]
-  }
-}
-```
+    "likes": ["oat milk", "strong coffee"]
+  }},
+  "remove": {{}},
+  "replace": {{}}
+}}
 
 - If no updates needed, return: `{"add_or_update": {}, "remove": {}, "replace": {}}`
 - Always return valid JSON, no explanations
