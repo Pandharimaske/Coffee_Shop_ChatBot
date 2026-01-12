@@ -57,18 +57,6 @@ guard_prompt = ChatPromptTemplate.from_messages([
 
 ---
 
-**Output Format:**
-
-Return ONLY valid JSON with this exact structure:
-
-{{
-  "decision": "allowed or not allowed",
-  "response_message": "message or empty string",
-  "memory_node": true or false
-}}
-
----
-
 **Examples:**
 
 User: "Hi"

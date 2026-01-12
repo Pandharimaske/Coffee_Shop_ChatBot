@@ -122,17 +122,6 @@ Output: {"target_agent": "details_agent", "response_message": ""}
 
 ---
 
-**Output Format:**
-
-Return ONLY valid JSON:
-
-{{
-  "target_agent": "agent_name",
-  "response_message": "optional clarification or empty string"
-}}
-
----
-
 **Critical Rules:**
 
 1. ALWAYS consider order status when routing order-related queries
