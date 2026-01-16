@@ -5,8 +5,11 @@ This is a multi-agent, modular chatbot system designed for automating a coffee s
 
 ---
 
-## 🎥 Live Demo
-▶️ https://www.youtube.com/watch?v=APp6CWFgrXw
+
+## 🔗 Quick Links
+- 🌐 **Live Demo**: [Try it here](https://coffee-shop-chatbot-p7tr.onrender.com)
+- 🎥 **Video Demo**: [Watch on YouTube]( https://www.youtube.com/watch?v=APp6CWFgrXw)
+
 
 ## 🔁 Architecture Overview
 
