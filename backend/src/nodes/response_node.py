@@ -1,0 +1,61 @@
+from langchain_core.runnables import Runnable
+from langchain_core.messages import HumanMessage, AIMessage
+from src.graph.states import CoffeeAgentState
+from src.prompts.response_prompt import refinement_prompt
+from src.utils.util import call_llm , call_llm_stream
+from src.utils.summary_memory import save_messages , save_order
+
+class ResponseNode():
+    def __init__(self):
+        pass
+
+    # def invoke(self , state: CoffeeAgentState , config=None) -> CoffeeAgentState:
+    #     user_id = config["configurable"]["user_id"]
+
+    #     inputs = {
+    #         "user_input": state["user_input"],
+    #         "agent_response": state["response_message"],
+    #         "state": str(state)
+    #     }
+
+    #     prompt = refinement_prompt.invoke(inputs)
+    #     refined_response = call_llm(prompt=prompt).content
+
+    #     state["response_message"] = refined_response
+    #     state["messages"] = [
+    #         HumanMessage(content=state["user_input"]),
+    #         AIMessage(content=state["response_message"])
+    #     ] + state["messages"]
+
+    #     save_messages(id=user_id, messages=state["messages"])
+    #     save_order(id=user_id, items=state["order"], final_price=state["final_price"])
+    
+    #     return CoffeeAgentState(**state)
+
+    async def astream(self, state: CoffeeAgentState, config=None):
+        """Stream only the final refined response."""
+        user_id = config["configurable"]["user_id"]
+
+        inputs = {
+            "user_input": state["user_input"],
+            "agent_response": state["response_message"],
+            "state": str(state)
+        }
+
+        prompt = refinement_prompt.invoke(inputs)
+
+        collected_chunks = []
+        async for chunk in call_llm_stream(prompt):
+            collected_chunks.append(chunk)
+            yield chunk   # stream chunk to frontend
+
+        # once done, save full response
+        refined_response = "".join(collected_chunks)
+        state["response_message"] = refined_response
+        state["messages"] = [
+            HumanMessage(content=state["user_input"]),
+            AIMessage(content=state["response_message"])
+        ] + state["messages"]
+
+        save_messages(id=user_id, messages=state["messages"])
+        save_order(id=user_id, items=state["order"], final_price=state["final_price"])
