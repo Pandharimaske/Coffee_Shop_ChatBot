@@ -18,6 +18,9 @@ pinecone==7.3.0
 # Supabase
 supabase==2.16.0
 
+# Email validation (required by pydantic EmailStr)
+email-validator==2.2.0
+
 # Utilities
 python-dotenv==1.1.1
 httpx
