@@ -87,9 +87,10 @@ const Order = () => {
                   className="flex items-center bg-white border border-gray-300 rounded-md p-4 shadow-sm"
                 >
                   <img
-                    src={`/images/${item.image_path}`}
+                    src={item.image_url || `/images/${item.image_path}` || "/images/Latte.jpg"}
                     alt={item.name}
                     className="w-20 h-20 object-cover rounded mr-4"
+                    onError={(e) => { e.target.src = "/images/Latte.jpg"; }}
                   />
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold">{item.name}</h3>

@@ -1,186 +1,213 @@
 import { useEffect, useState, useRef } from "react";
 import { FaPaperPlane, FaRobot } from "react-icons/fa";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { chatAPI } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
-// Spinner for loading
 const Spinner = () => (
-  <div className="w-5 h-5 border-2 border-t-transparent border-white rounded-full animate-spin"></div>
+  <div className="w-5 h-5 border-2 border-t-transparent border-white rounded-full animate-spin" />
 );
-const formatTime = (timestamp) => {
-  if (!timestamp) return "";
-  return new Date(timestamp).toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-};
 
+const formatTime = (timestamp) =>
+  new Date(timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+// ── Markdown renderer using react-markdown + remark-gfm ─────────────────────
+function BotMarkdown({ content }) {
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      components={{
+        p: ({ children }) => (
+          <p className="leading-relaxed mb-1.5 last:mb-0">{children}</p>
+        ),
+        strong: ({ children }) => (
+          <strong className="font-semibold text-[#3a2318]">{children}</strong>
+        ),
+        em: ({ children }) => (
+          <em className="italic opacity-90">{children}</em>
+        ),
+        ul: ({ children }) => (
+          <ul className="mt-0.5 mb-1.5 space-y-0.5">{children}</ul>
+        ),
+        ol: ({ children }) => (
+          <ol className="mt-0.5 mb-1.5 space-y-0.5 pl-1 list-decimal list-inside">{children}</ol>
+        ),
+        li: ({ children }) => (
+          <li className="flex gap-1.5 items-start leading-snug">
+            <span className="shrink-0 text-[#7a5c44] mt-px">•</span>
+            <span>{children}</span>
+          </li>
+        ),
+        hr: () => (
+          <hr className="my-2 border-[#c4a882] opacity-50" />
+        ),
+        a: ({ href, children }) => (
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline text-[#5c3d1e] hover:text-[#4B3832] transition-colors break-all"
+          >
+            {children}
+          </a>
+        ),
+        code: ({ children }) => (
+          <code className="bg-[#c9af96] text-[#3a2318] px-1 rounded text-xs font-mono">
+            {children}
+          </code>
+        ),
+        blockquote: ({ children }) => (
+          <blockquote className="border-l-2 border-[#b68d40] pl-2 my-1 italic opacity-80">
+            {children}
+          </blockquote>
+        ),
+      }}
+    >
+      {content}
+    </ReactMarkdown>
+  );
+}
+
+// ── Main Chatbot component ────────────────────────────────────────────────────
 const Chatbot = () => {
+  const { user } = useAuth();
   const [messages, setMessages] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
-  const [isChatOpen, setIsChatOpen] = useState(false);
-  const textRef = useRef("");
+  const [isOpen, setIsOpen] = useState(false);
   const inputRef = useRef(null);
-  const chatContainerRef = useRef(null);
+  const textRef = useRef("");
+  const bottomRef = useRef(null);
 
-  const toggleChat = () => {
-    setIsChatOpen(!isChatOpen);
-  };
-
-  // Load saved messages
+  // Auto scroll
   useEffect(() => {
-    const saved = localStorage.getItem("chat");
-    if (saved) setMessages(JSON.parse(saved));
-  }, []);
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, isTyping]);
 
-  // Save messages to local storage
+  // Load message history from DB on mount
   useEffect(() => {
-    localStorage.setItem("chat", JSON.stringify(messages));
-  }, [messages]);
-
-  // Initial greeting (only once)
-  useEffect(() => {
-    if (isChatOpen && messages.length === 0) {
-      const alreadyGreeted = localStorage.getItem("greeted");
-      if (!alreadyGreeted) {
+    if (!user) return;
+    chatAPI
+      .getHistory()
+      .then((history) => {
+        if (history.length > 0) {
+          setMessages(
+            history.map((m) => ({
+              role: m.role === "user" ? "user" : "bot",
+              content: m.content,
+              timestamp: new Date(),
+            }))
+          );
+        } else {
+          setMessages([
+            {
+              role: "bot",
+              content: `Hey ${user.username || user.email.split("@")[0]}! Welcome to Merry's Way ☕ What can I get you today?`,
+              timestamp: new Date(),
+            },
+          ]);
+        }
+      })
+      .catch(() => {
         setMessages([
           {
             role: "bot",
-            content:
-              "Hello! Welcome back to Merry's Way ☕ What can I get you today?",
+            content: "Welcome to Merry's Way ☕ What can I get you today?",
             timestamp: new Date(),
           },
         ]);
-        localStorage.setItem("greeted", "true");
-      }
-    }
-  }, [isChatOpen]);
+      });
+  }, [user]);
 
-  // Auto-scroll chat window
-  useEffect(() => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop =
-        chatContainerRef.current.scrollHeight;
-    }
-  }, [messages, isTyping]);
+  const handleSend = async () => {
+    const message = textRef.current.trim();
+    if (!message || isTyping) return;
 
-const handleSendMessage = async () => {
-  let message = textRef.current.trim();
-  if (!message) return;
-  
-  const userMessage = {
-    content: message,
-    role: "user",
-    timestamp: new Date(),
-  };
-  
-  setMessages((prev) => [...prev, userMessage]);
-  textRef.current = "";
-  if (inputRef.current) inputRef.current.value = "";
-  setIsTyping(true);
-  
-  try {
-    const eventSource = new EventSource(
-      `https://coffee-shop-chatbot.onrender.com/chat/stream?user_input=${encodeURIComponent(
-        message
-      )}&user_id=1`
-    );
-  
-    let botMessage = { content: "", role: "bot", timestamp: new Date() };
-    setMessages((prev) => [...prev, botMessage]);
-  
-    eventSource.onmessage = (event) => {
-      if (event.data === "[DONE]") {
-        eventSource.close();
-        setIsTyping(false);
-      } else {
-          // Append streamed chunk
-        setMessages((prev) => {
-          const updated = [...prev];
-          updated[updated.length - 1] = {
-            ...botMessage,
-            content: updated[updated.length - 1].content + event.data,
-          };
-          return updated;
-        });
-      }
-    };
-  
-    eventSource.onerror = (err) => {
-      console.error("SSE error:", err);
-      eventSource.close();
-      setIsTyping(false);
+    textRef.current = "";
+    if (inputRef.current) inputRef.current.value = "";
+
+    setMessages((prev) => [
+      ...prev,
+      { role: "user", content: message, timestamp: new Date() },
+    ]);
+    setIsTyping(true);
+
+    try {
+      const data = await chatAPI.send(message);
+      setMessages((prev) => [
+        ...prev,
+        { role: "bot", content: data.response, timestamp: new Date() },
+      ]);
+    } catch {
       setMessages((prev) => [
         ...prev,
         {
-          content: "⚠️ Oops! Streaming failed. Please try again.",
           role: "bot",
+          content: "⚠️ Something went wrong. Please try again.",
           timestamp: new Date(),
         },
       ]);
-    };
-  } catch (err) {
-    console.error("Error sending message:", err);
-    setIsTyping(false);
-    setMessages((prev) => [
-      ...prev,
-      {
-        content: "⚠️ Oops! Something went wrong. Please try again.",
-        role: "bot",
-        timestamp: new Date(),
-      },
-    ]);
-  }
-};
+    } finally {
+      setIsTyping(false);
+    }
+  };
 
-  // Format time
+  if (!user) return null;
 
   return (
     <>
-      {!isChatOpen && (
+      {/* Floating button */}
+      {!isOpen && (
         <button
-          onClick={toggleChat}
+          onClick={() => setIsOpen(true)}
           className="fixed bottom-6 right-6 bg-[#4B3832] text-white p-4 rounded-full shadow-lg hover:bg-[#3a2d27] transition z-50"
         >
           <FaRobot size={24} />
         </button>
       )}
 
+      {/* Chat window */}
       <div
-        className={`fixed bottom-0 inset-x-4 sm:right-6 sm:inset-x-auto w-full sm:w-1/3 h-[80vh] sm:h-[500px] bg-[#fefcf9] shadow-2xl rounded-t-xl transform ${
-          isChatOpen ? "translate-y-0" : "translate-y-full"
+        className={`fixed bottom-0 inset-x-4 sm:right-6 sm:inset-x-auto w-full sm:w-96 h-[80vh] sm:h-[520px] bg-[#fefcf9] shadow-2xl rounded-t-xl transform ${
+          isOpen ? "translate-y-0" : "translate-y-full"
         } transition-transform duration-300 ease-in-out z-40 flex flex-col border border-[#d1beab]`}
       >
         {/* Header */}
         <div className="flex justify-between items-center p-4 bg-[#4B3832] text-white rounded-t-xl">
-          <h2 className="text-lg font-semibold">Coffee Chatbot</h2>
+          <div>
+            <h2 className="text-lg font-semibold">Merry's Way ☕</h2>
+            <p className="text-xs text-[#d1beab]">Your coffee assistant</p>
+          </div>
           <button
-            onClick={toggleChat}
-            className="text-white text-xl hover:text-[#d1beab]"
+            onClick={() => setIsOpen(false)}
+            className="text-white text-2xl hover:text-[#d1beab]"
           >
             ×
           </button>
         </div>
 
-        {/* Chat Area */}
-        <div
-          ref={chatContainerRef}
-          className="flex-grow overflow-y-auto p-4 space-y-3 bg-[#fefcf9] scrollbar-thin scrollbar-thumb-[#d1beab] scrollbar-track-[#fefcf9]"
-        >
-          {messages.map((msg, index) => (
+        {/* Messages */}
+        <div className="flex-grow overflow-y-auto p-4 space-y-3 bg-[#fefcf9]">
+          {messages.map((msg, i) => (
             <div
-              key={index}
-              className={`flex ${
-                msg.role === "user" ? "justify-end" : "justify-start"
-              }`}
+              key={i}
+              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
             >
               <div
-                className={`px-4 py-2 max-w-[80%] text-sm rounded-lg shadow-md relative ${
+                className={`px-4 py-2.5 max-w-[82%] rounded-2xl shadow-sm ${
                   msg.role === "user"
-                    ? "bg-[#4B3832] text-white rounded-br-none"
-                    : "bg-[#d1beab] text-[#4B3832] rounded-bl-none"
+                    ? "bg-[#4B3832] text-white rounded-br-none text-sm"
+                    : "bg-[#e8ddd0] text-[#4B3832] rounded-bl-none"
                 }`}
               >
-                <div className="whitespace-pre-wrap">{msg.content}</div>
-                <div className="text-[10px] text-right mt-1 opacity-60">
+                {msg.role === "user" ? (
+                  <p className="leading-relaxed whitespace-pre-wrap text-sm">
+                    {msg.content}
+                  </p>
+                ) : (
+                  <BotMarkdown content={msg.content} />
+                )}
+                <div className="text-[10px] text-right mt-1 opacity-50">
                   {formatTime(msg.timestamp)}
                 </div>
               </div>
@@ -189,32 +216,36 @@ const handleSendMessage = async () => {
 
           {isTyping && (
             <div className="flex justify-start">
-              <div className="p-2 max-w-xs bg-[#d1beab] text-[#4B3832] rounded-2xl shadow animate-pulse">
-                Typing...
+              <div className="px-4 py-3 bg-[#e8ddd0] text-[#4B3832] rounded-2xl rounded-bl-none">
+                <span className="flex gap-1 items-center h-4">
+                  <span className="w-1.5 h-1.5 bg-[#7a5c44] rounded-full animate-bounce [animation-delay:0ms]" />
+                  <span className="w-1.5 h-1.5 bg-[#7a5c44] rounded-full animate-bounce [animation-delay:150ms]" />
+                  <span className="w-1.5 h-1.5 bg-[#7a5c44] rounded-full animate-bounce [animation-delay:300ms]" />
+                </span>
               </div>
             </div>
           )}
+          <div ref={bottomRef} />
         </div>
 
-        {/* Input Area */}
-        <div className="p-4 border-t flex items-center space-x-2 bg-[#f5efe6] rounded-b-xl">
+        {/* Input */}
+        <div className="p-3 border-t border-[#d1beab] flex items-center gap-2 bg-[#f5efe6] rounded-b-xl">
           <input
             ref={inputRef}
             type="text"
-            placeholder="Type a message..."
-            className="flex-grow p-2 rounded-full border border-gray-300 text-[#4B3832] bg-[#fffaf3]"
+            placeholder="Ask about our menu, place an order..."
+            className="flex-grow px-4 py-2 rounded-full border border-[#d1beab] bg-[#fffaf3] text-[#4B3832] text-sm focus:outline-none focus:ring-2 focus:ring-[#4B3832]"
             onChange={(e) => (textRef.current = e.target.value)}
-            onBlur={() => (textRef.current = inputRef.current?.value || "")}
-            onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+            onKeyDown={(e) => e.key === "Enter" && handleSend()}
           />
           <button
+            onClick={handleSend}
             disabled={isTyping}
-            onClick={handleSendMessage}
-            className={`p-2 rounded-full ${
+            className={`p-2.5 rounded-full text-white flex items-center justify-center transition ${
               isTyping ? "bg-gray-400" : "bg-[#4B3832] hover:bg-[#3a2d27]"
-            } text-white flex items-center justify-center`}
+            }`}
           >
-            {isTyping ? <Spinner /> : <FaPaperPlane size={20} />}
+            {isTyping ? <Spinner /> : <FaPaperPlane size={16} />}
           </button>
         </div>
       </div>

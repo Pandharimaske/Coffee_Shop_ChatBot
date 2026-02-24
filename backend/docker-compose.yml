@@ -7,4 +7,6 @@ services:
     restart: always
     ports:
       - "8000:8000"
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    env_file:
+      - .env
+    command: gunicorn -k uvicorn.workers.UvicornWorker api.main:app --bind 0.0.0.0:8000 --workers 1 --timeout 120

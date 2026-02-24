@@ -3,10 +3,10 @@ from logging.handlers import RotatingFileHandler
 import os
 
 # Create logs directory if it doesn't exist
-os.makedirs("Backend/logs", exist_ok=True)
+os.makedirs("logs", exist_ok=True)
 
 # Configure log file path
-log_file = "Backend/logs/coffee_bot.log"
+log_file = "logs/coffee_bot.log"
 
 # Create rotating file handler (max 1MB per file, keep 3 backups)
 file_handler = RotatingFileHandler(log_file, maxBytes=1_000_000, backupCount=3)

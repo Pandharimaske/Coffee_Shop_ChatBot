@@ -1,43 +1,60 @@
 from langchain_core.tools import Tool
+import logging
 
-def about_us_tool(_: str = "") -> str:
-    """Provides information about Merry's Way Coffee including mission, story, specialties, and delivery zones."""
-    return """
-Merry's Way Coffee
-Location: Koregaon Park, Pune
-Founded: 2015
+logger = logging.getLogger(__name__)
 
-Story:
-Founded in 2015, Merry’s Way started as a small family-owned café with one mission: to share the love of quality, ethically-sourced coffee with the community. Merry's journey across South America led to partnerships with small farms and cooperatives. Beans are roasted in-house to reflect regional flavors.
 
-Mission:
-To provide quality, ethically-sourced coffee while fostering community, sustainability, and creativity.
+def about_us_func(_: str = "") -> str:
+    """
+    Provides information about Merry's Way Coffee including 
+    mission, story, specialties, and delivery zones.
+    
+    Args:
+        _: Unused parameter for compatibility
+    
+    Returns:
+        str: Comprehensive shop information
+    """
+    try:
+        shop_info = """**Merry's Way Coffee** - Koregaon Park, Pune
 
-Specialties:
-- Signature espresso blends
-- Cold brews
-- Artisanal teas
-- Fresh-baked goods
-- Plant-based and gluten-free options
+**Our Story:**
+Founded in 2015 as a family-owned café with a mission to share quality, ethically-sourced coffee with our community. Our founder's journey through South America led to partnerships with small farms and cooperatives. We roast beans in-house to bring out regional flavors.
 
-Delivery Areas:
-- Koregaon Park
-- Viman Nagar
-- Kalyani Nagar
-- Camp
-- Shivaji Nagar
+**Mission:**
+Provide quality, ethically-sourced coffee while fostering community, sustainability, and creativity.
 
-Community Engagement:
-Hosts live music nights, art showcases, and fundraisers. Uses eco-friendly packaging and supports local farmers. Free high-speed WiFi available for customers.
+**Specialties:**
+• Signature espresso blends
+• Cold brews & artisanal teas
+• Fresh-baked goods daily
+• Plant-based & gluten-free options
 
-Working Hours:
-- Monday–Friday: 7 AM – 8 PM
-- Saturday: 8 AM – 8 PM
-- Sunday: 8 AM – 6 PM
+**Hours:**
+• Monday–Friday: 7 AM – 8 PM
+• Saturday: 8 AM – 8 PM
+• Sunday: 8 AM – 6 PM
+
+**Delivery Areas:**
+Koregaon Park • Viman Nagar • Kalyani Nagar • Camp • Shivaji Nagar
+
+**Community:**
+We host live music nights, art showcases, and fundraisers. Eco-friendly packaging, support for local farmers, and free high-speed WiFi for all customers.
 """
+        logger.info("Shop information requested")
+        return shop_info
+        
+    except Exception as e:
+        logger.error(f"Error retrieving shop information: {str(e)}")
+        return f"Sorry, I couldn't retrieve shop information right now. Error: {str(e)}"
 
+
+# Create tool
 about_us_tool = Tool(
     name="AboutUsTool",
-    func=about_us_tool,
-    description="Use this tool to answer questions about the coffee shop itself: story, mission, delivery areas, working hours, specialties. No input is required"
+    func=about_us_func,
+    description=(
+        "Get information about the coffee shop: story, mission, hours, "
+        "location, delivery areas, and specialties. No input required."
+    )
 )

@@ -1,0 +1,34 @@
+services:
+  - type: web
+    name: coffee-shop-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    envVars:
+      - key: ENV
+        value: production
+      - key: DEBUG
+        value: false
+      - key: ALLOWED_ORIGINS
+        sync: false   # set manually in Render dashboard to your Vercel URL
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: HF_API_KEY
+        sync: false
+      - key: PINECONE_API_KEY
+        sync: false
+      - key: PINECONE_INDEX_NAME
+        value: coffee-products
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: LANGCHAIN_API_KEY
+        sync: false
+      - key: LANGSMITH_TRACING_V2
+        value: "false"
