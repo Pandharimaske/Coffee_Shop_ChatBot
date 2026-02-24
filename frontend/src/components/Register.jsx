@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { authAPI } from "../services/api";
 
 const Register = () => {
-  const { register } = useAuth();
   const navigate = useNavigate();
 
   const [username, setUsername] = useState("");
@@ -17,8 +16,9 @@ const Register = () => {
     setError("");
     setLoading(true);
     try {
-      await register(username, email, password);
-      navigate("/", { replace: true });
+      await authAPI.register(username, email, password);
+      // Redirect to login with success flag — no auto-login, no email confirmation needed
+      navigate("/login", { state: { registered: true }, replace: true });
     } catch (err) {
       setError(err.message || "Registration failed. Please try again.");
     } finally {

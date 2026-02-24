@@ -8,6 +8,9 @@ const Login = () => {
   const location = useLocation();
   const from = location.state?.from?.pathname || "/";
 
+  // Show success banner if redirected here after registration
+  const justRegistered = location.state?.registered === true;
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -32,6 +35,14 @@ const Login = () => {
       <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
         <h2 className="text-3xl font-bold text-[#4B3832] mb-2">Welcome back ☕</h2>
         <p className="text-[#9c7e6c] mb-6">Sign in to your account</p>
+
+        {/* Success banner — shown after successful registration */}
+        {justRegistered && (
+          <div className="flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 rounded-lg px-4 py-3 mb-4 text-sm">
+            <span className="text-lg">✅</span>
+            <span>Account created successfully! Please sign in to continue.</span>
+          </div>
+        )}
 
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-600 rounded-lg px-4 py-3 mb-4 text-sm">
