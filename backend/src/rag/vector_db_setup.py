@@ -64,7 +64,7 @@ class VectorDBSetup:
             f"{row['name']}:\n"
             f"{row['description']}\n"
             f"Ingredients: {row['ingredients']}\n"
-            f"Price: ${row['price']}\n"
+            f"Price: ₹{row['price']}\n"
             f"Rating: {row['rating']}"
         )
         return text
