@@ -17,6 +17,6 @@ class CoffeeAgentState(BaseModel):
     user_memory: UserMemory = Field(default_factory=UserMemory)
     chat_summary: str = ""
     user_input: str = ""
-    response_message: str = ""
+    response_message: Optional[str] = ""
     order: List[ProductItem] = Field(default_factory=list)
     final_price: float = 0.0

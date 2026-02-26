@@ -63,10 +63,9 @@ async def chat(body: ChatRequest, current_user: CurrentUser):
     try:
         final_state = await _graph.ainvoke(state, config=config)
         response = (
-            final_state.get("response_message")
-            if isinstance(final_state, dict)
-            else final_state.response_message
-        ) or "Sorry, I had a little trouble with that. Could you try again?"
+            (final_state.get("response_message") if isinstance(final_state, dict) else final_state.response_message)
+            or "Sorry, I had a little trouble with that. Could you try again?"
+        )
 
         save_messages(session_id, user_email, body.user_input, response)
 
