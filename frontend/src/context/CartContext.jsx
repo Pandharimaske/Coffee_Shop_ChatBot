@@ -103,8 +103,26 @@ export const CartProvider = ({ children }) => {
     scheduleSync([]);
   };
 
+  // Pull latest order from backend and sync into cart — called after bot responds
+  const refreshCart = async () => {
+    if (!user) return;
+    try {
+      const [order, products] = await Promise.all([ordersAPI.getActive(), productsAPI.getAll()]);
+      const imageMap = Object.fromEntries(products.map((p) => [p.name, p.image_url]));
+      const loaded = (order.items || []).map((i) => ({
+        name: i.name,
+        price: i.per_unit_price,
+        quantity: i.quantity,
+        total_price: i.total_price,
+        image_url: imageMap[i.name] || null,
+      }));
+      setCartItems(loaded);
+      latestItems.current = loaded;
+    } catch {}
+  };
+
   return (
-    <CartContext.Provider value={{ cartItems, addToCart, removeFromCart, updateCartItem, clearCart }}>
+    <CartContext.Provider value={{ cartItems, addToCart, removeFromCart, updateCartItem, clearCart, refreshCart }}>
       {children}
     </CartContext.Provider>
   );
