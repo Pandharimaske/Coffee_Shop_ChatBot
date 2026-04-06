@@ -3,18 +3,15 @@ import json
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from api.auth import CurrentUser
-from api.schemas import ChatRequest, ChatResponse, MessageHistoryResponse
+from api.schemas import ChatRequest, ChatResponse, MessageHistoryResponse, ResumeRequest
 from pydantic import BaseModel
 from langgraph.types import Command
 from src.graph.graph import build_coffee_shop_graph
 from src.graph.state import CoffeeAgentState
 from src.memory.memory_manager import get_user_memory
 from src.orders import get_active_order
-from src.sessions import get_or_create_session, load_messages, save_messages
+from src.sessions import get_or_create_session, load_messages, save_messages, append_message, append_messages
 
-class ResumeRequest(BaseModel):
-    session_id: str
-    payment_status: str
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -36,22 +33,28 @@ async def get_history(session_id: str, current_user: CurrentUser):
 
 @router.post("", response_model=ChatResponse)
 async def chat(body: ChatRequest, current_user: CurrentUser):
+    import asyncio
+    import time
+    
+    start_time = time.time()
     user_email = current_user.email
     session_id = body.session_id or str(uuid.uuid4())
 
-    get_or_create_session(session_id, user_email)
-
-    try:
-        user_memory = get_user_memory(user_email)
-    except Exception:
-        user_memory = None
-
-    try:
-        order, final_price = get_active_order(user_email)
-    except Exception:
-        order, final_price = [], 0.0
-
-    messages = load_messages(session_id)
+    # Parallelize pre-graph loads
+    # Using to_thread because supabase-py is synchronous
+    tasks = [
+        asyncio.to_thread(get_or_create_session, session_id, user_email),
+        asyncio.to_thread(get_user_memory, user_email),
+        asyncio.to_thread(get_active_order, user_email),
+        asyncio.to_thread(load_messages, session_id)
+    ]
+    
+    # Run all 4 queries simultaneously
+    _, user_memory, (order, final_price), messages = await asyncio.gather(*tasks)
+    
+    # Defaults and safety handling
+    if not isinstance(user_memory, UserMemory): user_memory = None
+    if order is None: order, final_price = [], 0.0
 
     state = CoffeeAgentState(
         user_input=body.user_input,
@@ -60,6 +63,8 @@ async def chat(body: ChatRequest, current_user: CurrentUser):
         final_price=final_price,
         messages=messages,
     )
+    
+    logger.info(f"Pre-graph data loaded in parallel: {(time.time() - start_time)*1000:.2f}ms")
 
     config = {
         "configurable": {
@@ -167,6 +172,11 @@ async def stream_chat(body: ChatRequest, current_user: CurrentUser):
             current_state = await _graph.aget_state(config)
             if current_state.tasks and current_state.tasks[0].interrupts:
                 payload = current_state.tasks[0].interrupts[0].value
+                # SAVE BUBBLE TO HISTORY SO IT SURVIVES REFRESH
+                # Using a generic label for the bubble or details if available
+                details = payload.get("details", {}) if isinstance(payload, dict) else {}
+                bubble_text = f"[Approval Required] {details}" if details else "Please approve the action above."
+                append_message(session_id, user_email, "bot", bubble_text)
                 yield f"data: {json.dumps({'type': 'interrupt', 'payload': payload})}\n\n"
                 return  # Skip saving to history and returning text since we are paused
             
@@ -183,8 +193,9 @@ async def stream_chat(body: ChatRequest, current_user: CurrentUser):
                 "I'm having trouble updating your order right now. Please try again."
             ]
             
-            if full_response not in error_fallbacks:
-                save_messages(session_id, user_email, body.user_input, full_response)
+            if full_response not in error_fallbacks and full_response.strip():
+                # SAVE FINAL BOT RESPONSE
+                append_message(session_id, user_email, "bot", full_response)
             
         except Exception as e:
             yield f"data: {json.dumps({'type': 'error', 'content': str(e)})}\n\n"
@@ -204,11 +215,22 @@ async def resume_chat(body: ResumeRequest, current_user: CurrentUser):
             Command(resume=body.payment_status),
             config=config
         )
+        user_label = body.user_content or "Action Confirmed"
         response = (
             (final_state.get("response_message") if isinstance(final_state, dict) else final_state.response_message)
-            or "Payment processed successfully!"
+            or "Action processed successfully!"
         )
-        save_messages(body.session_id, current_user.email, "[Payment Completed]", response)
+        
+        # USE ATOMIC SAVE FOR THE TURN (Approval + Response)
+        try:
+            append_messages(body.session_id, current_user.email, [
+                {"role": "user", "content": user_label},
+                {"role": "bot", "content": response}
+            ])
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Failed to save atomic turnout: {e}")
+            
         return ChatResponse(session_id=body.session_id, response=response)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Checkout resume error: {str(e)}")

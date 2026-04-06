@@ -54,12 +54,19 @@ async def memory_agent(state: CoffeeAgentState, config: RunnableConfig) -> Comma
         # Apply updates
         memory = state.user_memory.model_copy(deep=True)
 
+        logger.info(f"--- MEMORY AGENT: APPLYING UPDATES for {user_id} ---")
+        logger.info(f"Current Memory: {memory.model_dump()}")
+        logger.info(f"Intent (Remove): {intent.remove}")
+        logger.info(f"Intent (Add): {intent.add_or_update}")
+
         if intent.add_or_update:
             memory = merge_and_update_memory(intent.add_or_update, memory)
         if intent.remove:
             memory = remove_from_memory(intent.remove, memory)
         if intent.replace:
             memory = replace_in_memory(intent.replace, memory)
+
+        logger.info(f"Updated Memory (Ready to Save): {memory.model_dump()}")
 
         # Persist to Supabase
         if user_id != "anonymous":

@@ -13,20 +13,22 @@ SESSIONS_TABLE  = "coffee_shop_sessions"
 
 def get_or_create_session(session_id: str, user_email: str) -> None:
     """Ensure session row exists, update last_active."""
+    sid = str(session_id).lower().strip()
+    email = str(user_email).lower().strip()
     try:
-        res = supabase.table(SESSIONS_TABLE).select("session_id").eq("session_id", session_id).execute()
+        res = supabase.table(SESSIONS_TABLE).select("session_id").eq("session_id", sid).execute()
         if res.data:
             supabase.table(SESSIONS_TABLE).update(
                 {"last_active": datetime.now().isoformat()}
-            ).eq("session_id", session_id).execute()
+            ).eq("session_id", sid).execute()
         else:
             supabase.table(SESSIONS_TABLE).insert({
-                "session_id": session_id,
-                "user_email": user_email,
+                "session_id": sid,
+                "user_email": email,
                 "created_at": datetime.now().isoformat(),
                 "last_active": datetime.now().isoformat(),
             }).execute()
-            logger.info(f"New session: {session_id} for {user_email}")
+            logger.info(f"New session: {sid} for {email}")
     except Exception as e:
         logger.error(f"get_or_create_session failed: {e}")
 
@@ -38,11 +40,12 @@ def load_messages(session_id: str) -> List[BaseMessage]:
     Load all messages for a session.
     Single row per session — messages stored as JSONB array.
     """
+    sid = str(session_id).lower().strip()
     try:
         res = (
             supabase.table(SESSIONS_TABLE)
             .select("messages")
-            .eq("session_id", session_id)
+            .eq("session_id", sid)
             .execute()
         )
         if not res.data:
@@ -51,10 +54,13 @@ def load_messages(session_id: str) -> List[BaseMessage]:
         raw = res.data[0].get("messages", [])
         result = []
         for m in raw:
-            if m["role"] == "user":
-                result.append(HumanMessage(content=m["content"]))
-            elif m["role"] == "assistant":
-                result.append(AIMessage(content=m["content"]))
+            role = str(m.get("role", "")).lower()
+            content = m.get("content", "")
+            
+            if role in ("user", "human"):
+                result.append(HumanMessage(content=content))
+            elif role in ("assistant", "bot"):
+                result.append(AIMessage(content=content))
         return result
 
     except Exception as e:
@@ -62,35 +68,54 @@ def load_messages(session_id: str) -> List[BaseMessage]:
         return []
 
 
+def append_messages(session_id: str, user_email: str, new_messages: List[dict]) -> None:
+    """
+    Append multiple messages atomically using a Supabase RPC.
+    Eliminates all race conditions by doing the 'append' on the database side.
+    """
+    sid = str(session_id).lower().strip()
+    email = str(user_email).lower().strip()
+    now = datetime.now().isoformat()
+    
+    try:
+        # Prepare the payload for JSONB concatenation
+        to_add = []
+        for m in new_messages:
+            to_add.append({
+                "role": m["role"].lower(),
+                "content": m["content"],
+                "timestamp": now
+            })
+            
+        # CALL ATOMIC RPC: append_chat_messages(p_session_id, p_user_email, p_new_messages)
+        res = supabase.rpc("append_chat_messages", {
+            "p_session_id": sid,
+            "p_user_email": email,
+            "p_new_messages": to_add
+        }).execute()
+        
+        if hasattr(res, 'error') and res.error:
+            logger.error(f"RPC append_chat_messages failed for {sid}: {res.error}")
+            # NO FALLBACK TO READ-MODIFY-WRITE (It is unsafe and causes the race condition)
+        else:
+            logger.info(f"Atomic messages appended for session {sid} ✅")
+            
+    except Exception as e:
+        logger.error(f"append_messages exception for session {sid}: {e}")
+
+
+def append_message(session_id: str, user_email: str, role: str, content: str) -> None:
+    """
+    Append a single message (atomic).
+    """
+    append_messages(session_id, user_email, [{"role": role, "content": content}])
+
+
 def save_messages(session_id: str, user_email: str, user_input: str, bot_response: str) -> None:
     """
-    Append one turn (user + assistant) to the session's message array.
-    Upserts a single row per session.
+    Compatibility function — appends a turn (User + Bot) atomically.
     """
-    try:
-        now = datetime.now().isoformat()
-
-        # Load existing messages
-        res = (
-            supabase.table(SESSIONS_TABLE)
-            .select("messages")
-            .eq("session_id", session_id)
-            .execute()
-        )
-
-        existing = res.data[0]["messages"] if res.data else []
-
-        # Append new turn
-        updated = existing + [
-            {"role": "user",      "content": user_input,    "timestamp": now},
-            {"role": "assistant", "content": bot_response,  "timestamp": now},
-        ]
-
-        # Update single row in sessions table
-        supabase.table(SESSIONS_TABLE).update({
-            "messages": updated,
-            "last_active": now,
-        }).eq("session_id", session_id).execute()
-
-    except Exception as e:
-        logger.error(f"save_messages failed for session {session_id}: {e}")
+    append_messages(session_id, user_email, [
+        {"role": "user", "content": user_input},
+        {"role": "bot", "content": bot_response}
+    ])

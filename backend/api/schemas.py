@@ -59,6 +59,12 @@ class ChatResponse(BaseModel):
     response: str
 
 
+class ResumeRequest(BaseModel):
+    session_id: str
+    payment_status: str
+    user_content: Optional[str] = None
+
+
 class MessageHistoryResponse(BaseModel):
     role: str   # 'user' | 'assistant'
     content: str

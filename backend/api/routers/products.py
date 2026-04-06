@@ -9,10 +9,18 @@ from src.memory.supabase_client import supabase_admin as supabase
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/products", tags=["products"])
 
+import time
+from typing import List, Dict
+
 # Local fallback — used when Supabase is unreachable
 _LOCAL_PRODUCTS_PATH = os.path.join(
     os.path.dirname(__file__), "../../data/products_data/products.jsonl"
 )
+
+# Cache settings
+_PRODUCT_CACHE: List[Dict] = []
+_CACHE_TIMESTAMP: float = 0.0
+_CACHE_TTL = 600  # 10 minutes in seconds
 
 def _load_local_products() -> list[dict]:
     """Load products from local JSONL file as fallback."""
@@ -45,24 +53,31 @@ async def get_products(
     category: Optional[str] = Query(default=None),
     search: Optional[str] = Query(default=None),
 ):
-    # Try Supabase first
-    try:
-        query = supabase.table("coffee_shop_products").select("*")
-        if category:
-            query = query.eq("category", category)
-        if search:
-            query = query.ilike("name", f"%{search}%")
-        res = query.order("name").execute()
+    global _PRODUCT_CACHE, _CACHE_TIMESTAMP
+    
+    # 1. Check if cache is valid
+    now = time.time()
+    if not _PRODUCT_CACHE or (now - _CACHE_TIMESTAMP > _CACHE_TTL):
+        # Cache expired or empty — reload from Supabase
+        try:
+            res = supabase.table("coffee_shop_products").select("*").order("name").execute()
+            if res.data:
+                _PRODUCT_CACHE = res.data
+                _CACHE_TIMESTAMP = now
+                logger.info(f"Product cache refreshed from Supabase: {len(_PRODUCT_CACHE)} items")
+        except Exception as e:
+            logger.warning(f"Supabase products unavailable ({e}) — will use local fallback or existing cache")
 
-        if res.data:
-            logger.info(f"Products from Supabase: {len(res.data)} rows")
-            return [ProductResponse(**row) for row in res.data]
+    # 2. Use cache (or local fallback if cache still empty)
+    products = _PRODUCT_CACHE if _PRODUCT_CACHE else _load_local_products()
 
-    except Exception as e:
-        logger.warning(f"Supabase products unavailable ({e}) — using local fallback")
+    # 3. Apply filters in memory (extremely fast)
+    if category:
+        products = [p for p in products if p.get("category", "").lower() == category.lower()]
+    if search:
+        products = [p for p in products if search.lower() in p["name"].lower()]
 
-    # Fallback to local JSONL
-    products = _load_local_products()
+    return [ProductResponse(**p) for p in sorted(products, key=lambda x: x["name"])]
 
     if category:
         products = [p for p in products if p.get("category", "").lower() == category.lower()]

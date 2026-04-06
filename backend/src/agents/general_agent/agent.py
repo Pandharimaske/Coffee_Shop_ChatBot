@@ -28,8 +28,11 @@ async def general_agent(state: CoffeeAgentState) -> Command:
             current_order = "empty"
             order_total = "0.00"
 
+        # sliding window: only send last 10 messages to LLM to prevent token limits
+        recent_messages = state.messages[-10:] if state.messages else []
+
         response = await _chain.ainvoke({
-            "messages": state.messages,
+            "messages": recent_messages,
             "user_memory": state.user_memory.model_dump(),
             "current_order": current_order,
             "order_total": order_total,

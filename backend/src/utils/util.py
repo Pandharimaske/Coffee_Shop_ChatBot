@@ -18,6 +18,7 @@ import time
 
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
+from langchain_groq import ChatGroq
 from langchain_huggingface import HuggingFaceEndpointEmbeddings
 from langchain_pinecone import PineconeVectorStore
 from pinecone import Pinecone, ServerlessSpec, PineconeException
@@ -98,18 +99,48 @@ class LLMPool:
         with self._lock:
             if key not in LLMPool._models:
                 try:
-                    logger.info(f"Creating new LLM instance: {key}")
-                    LLMPool._models[key] = ChatOpenAI(
-                        model=model_name,
-                        openai_api_key=Config.OPENROUTER_API_KEY,
-                        openai_api_base=Config.OPENROUTER_BASE_URL,
-                        temperature=temperature,
-                        timeout=Config.LLM_TIMEOUT_SECONDS,
-                        default_headers={
-                            "HTTP-Referer": Config.APP_URL,
-                            "X-Title": Config.APP_NAME
-                        }
-                    )
+                    # Determine which provider to use as primary
+                    has_groq = bool(Config.GROQ_API_KEY)
+                    has_openrouter = bool(Config.OPENROUTER_API_KEY)
+
+                    if not has_groq and not has_openrouter:
+                        logger.error("No LLM API keys found! (GROQ_API_KEY or OPENROUTER_API_KEY)")
+
+                    logger.info(f"Initializing Resilient LLM: primary={'Groq' if has_groq else 'OpenRouter'} | model={Config.GROQ_MODEL if has_groq else model_name}")
+
+                    # Option A: Groq as Primary (Preferred for speed/limits)
+                    if has_groq:
+                        groq_llm = ChatGroq(
+                            model=Config.GROQ_MODEL,
+                            groq_api_key=Config.GROQ_API_KEY,
+                            temperature=temperature,
+                            timeout=Config.LLM_TIMEOUT_SECONDS
+                        )
+                        # OpenRouter as Fallback for Groq
+                        if has_openrouter:
+                            or_fallback = ChatOpenAI(
+                                model=model_name,
+                                openai_api_key=Config.OPENROUTER_API_KEY,
+                                openai_api_base=Config.OPENROUTER_BASE_URL,
+                                temperature=temperature,
+                                timeout=Config.LLM_TIMEOUT_SECONDS,
+                                default_headers={"HTTP-Referer": Config.APP_URL, "X-Title": Config.APP_NAME}
+                            )
+                            LLMPool._models[key] = groq_llm.with_fallbacks([or_fallback])
+                        else:
+                            LLMPool._models[key] = groq_llm
+                    
+                    # Option B: OpenRouter as Primary (Fallback if no Groq key)
+                    elif has_openrouter:
+                        LLMPool._models[key] = ChatOpenAI(
+                            model=model_name,
+                            openai_api_key=Config.OPENROUTER_API_KEY,
+                            openai_api_base=Config.OPENROUTER_BASE_URL,
+                            temperature=temperature,
+                            timeout=Config.LLM_TIMEOUT_SECONDS,
+                            default_headers={"HTTP-Referer": Config.APP_URL, "X-Title": Config.APP_NAME}
+                        )
+
                     self.health_checker.mark_check(True)
                 except Exception as e:
                     logger.error(f"Failed to create LLM instance: {str(e)}")

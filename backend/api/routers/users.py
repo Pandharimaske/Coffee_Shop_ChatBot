@@ -38,16 +38,21 @@ async def get_preferences(current_user: CurrentUser):
 async def update_preferences(body: PreferencesRequest, current_user: CurrentUser):
     """
     Onboarding / settings form endpoint.
-    Completely replaces preferences with what user submits.
+    Merges updates into existing preferences to avoid wiping feedback/history.
     """
-    memory = UserMemory(
-        name=body.name,
-        likes=body.likes or [],
-        dislikes=body.dislikes or [],
-        allergies=body.allergies or [],
-        location=body.location,
-        feedback=[],
-        last_order=None,
-    )
-    save_user_memory(current_user.email, memory)
-    return PreferencesResponse(**memory.model_dump())
+    # 1. Fetch existing memory to perform a Smart Merge
+    existing_memory = get_user_memory(current_user.email)
+    
+    # 2. Update only the fields provided in the body
+    existing_memory.name = body.name
+    existing_memory.likes = body.likes if body.likes is not None else existing_memory.likes
+    existing_memory.dislikes = body.dislikes if body.dislikes is not None else existing_memory.dislikes
+    existing_memory.allergies = body.allergies if body.allergies is not None else existing_memory.allergies
+    existing_memory.location = body.location
+    
+    # NOTE: feedback and last_order are preserved because they are already in existing_memory
+    
+    # 3. Save the merged memory
+    save_user_memory(current_user.email, existing_memory)
+    
+    return PreferencesResponse(**existing_memory.model_dump())

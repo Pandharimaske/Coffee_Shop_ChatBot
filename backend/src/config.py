@@ -39,6 +39,8 @@ class Settings(BaseSettings):
     llm_temperature: float = 0.0
     openrouter_api_key: str = ""
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
+    groq_api_key: str = ""
+    groq_model: str = "llama-3.3-70b-versatile"
     llm_timeout_seconds: int = 30
 
     # ── Embeddings ────────────────────────────────────────────────────────────
@@ -117,6 +119,8 @@ class Config:
     LLM_TEMPERATURE = settings.llm_temperature
     OPENROUTER_API_KEY = settings.openrouter_api_key
     OPENROUTER_BASE_URL = settings.openrouter_base_url
+    GROQ_API_KEY = settings.groq_api_key
+    GROQ_MODEL = settings.groq_model
     LLM_TIMEOUT_SECONDS = settings.llm_timeout_seconds
 
     EMBEDDING_MODEL = settings.embedding_model
