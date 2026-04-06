@@ -25,20 +25,22 @@ guard_prompt = ChatPromptTemplate.from_messages([
 
 **Rules:**
 - When ALLOWED → decision: "allowed", response_message: ""
-- When NOT ALLOWED → decision: "not allowed", response_message: friendly redirect
+- When BLOCKED → decision: "blocked", response_message: friendly redirect
 - ALWAYS allow greetings ("hi", "thanks", "bye") — never block these
 - When in doubt → allow. Better to pass through than wrongly block.
 
-**NOT ALLOWED response format:**
-- Never say "I can't" — say "I'm here to help with coffee!"
+**BLOCKED response format:**
+- Never say "I can't" — say "I'm here to help with coffee and bakery items!"
 - Always offer an alternative: "What can I get you today?"
 
 **Examples:**
 - "hi" → allowed
 - "I want a latte" → allowed
+- "tell me about Cranberry Scone" → allowed
+- "do you have sandwiches?" → allowed
 - "I'm allergic to nuts" → allowed
-- "What's the weather?" → not allowed, "I'm all about coffee! What can I get you today?"
-- "Write me a poem" → not allowed, "I'm better at brewing coffee than poetry! Can I take your order?"
+- "What's the weather?" → blocked, "I'm all about coffee and baked goods! What can I get you today?"
+- "Write me a poem" → blocked, "I'm better at brewing coffee than poetry! Can I take your order?"
 
 Return ONLY valid JSON. No explanations.
 """),

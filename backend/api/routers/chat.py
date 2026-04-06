@@ -1,12 +1,20 @@
 import uuid
+import json
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 from api.auth import CurrentUser
 from api.schemas import ChatRequest, ChatResponse, MessageHistoryResponse
+from pydantic import BaseModel
+from langgraph.types import Command
 from src.graph.graph import build_coffee_shop_graph
 from src.graph.state import CoffeeAgentState
 from src.memory.memory_manager import get_user_memory
 from src.orders import get_active_order
 from src.sessions import get_or_create_session, load_messages, save_messages
+
+class ResumeRequest(BaseModel):
+    session_id: str
+    payment_status: str
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -62,14 +70,146 @@ async def chat(body: ChatRequest, current_user: CurrentUser):
 
     try:
         final_state = await _graph.ainvoke(state, config=config)
+        
+        current_state = await _graph.aget_state(config)
+        if current_state.tasks and current_state.tasks[0].interrupts:
+            payload = current_state.tasks[0].interrupts[0].value
+            return ChatResponse(session_id=session_id, response=f"__INTERRUPT__:{json.dumps(payload)}")
+        
         response = (
             (final_state.get("response_message") if isinstance(final_state, dict) else final_state.response_message)
             or "Sorry, I had a little trouble with that. Could you try again?"
         )
 
-        save_messages(session_id, user_email, body.user_input, response)
+        # Do not save known fallback errors into the user's conversation history
+        error_fallbacks = [
+            "I'm having a little trouble. Can we stick to coffee orders for now?",
+            "Sorry, I'm having trouble understanding your request right now. Could you please try again?",
+            "I'm having trouble retrieving that information right now. Please try again.",
+            "Hey there! Sorry, I had a small hiccup. How can I help you today?",
+            "Sorry, I had a little trouble with that. Could you try again?",
+            "I'm having trouble updating your order right now. Please try again."
+        ]
+        
+        if response not in error_fallbacks:
+            save_messages(session_id, user_email, body.user_input, response)
 
         return ChatResponse(session_id=session_id, response=response)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Chatbot error: {str(e)}")
+
+
+@router.post("/stream")
+async def stream_chat(body: ChatRequest, current_user: CurrentUser):
+    user_email = current_user.email
+    session_id = body.session_id or str(uuid.uuid4())
+
+    get_or_create_session(session_id, user_email)
+
+    try:
+        user_memory = get_user_memory(user_email)
+    except Exception:
+        user_memory = None
+
+    try:
+        order, final_price = get_active_order(user_email)
+    except Exception:
+        order, final_price = [], 0.0
+
+    messages = load_messages(session_id)
+
+    state = CoffeeAgentState(
+        user_input=body.user_input,
+        user_memory=user_memory or CoffeeAgentState().user_memory,
+        order=order,
+        final_price=final_price,
+        messages=messages,
+    )
+
+    config = {
+        "configurable": {
+            "thread_id": session_id,
+            "user_id": user_email,
+        }
+    }
+
+    async def event_generator():
+        full_response = ""
+        final_state_msg = None
+        answering_agents = {
+            "general_agent"
+        }
+        
+        try:
+            async for event in _graph.astream_events(state, config=config, version="v2"):
+                kind = event["event"]
+                node_name = event["metadata"].get("langgraph_node")
+
+                # Graph compilation names might vary (e.g. "LangGraph") so we check root chain output
+                if kind == "on_chain_end" and not node_name:
+                    output = event["data"].get("output", {})
+                    if isinstance(output, dict) and "response_message" in output:
+                        final_state_msg = output["response_message"]
+                    elif hasattr(output, "response_message"):
+                        final_state_msg = output.response_message
+                
+                if kind in ("on_chat_model_start", "on_chain_start") and node_name and not node_name.startswith("_") and node_name not in ("graph", "builder"):
+                    yield f"data: {json.dumps({'type': 'status', 'node': node_name})}\n\n"
+                    
+                elif kind == "on_chat_model_stream" and node_name in answering_agents:
+                    chunk = event["data"]["chunk"]
+                    text_chunk = chunk.content if hasattr(chunk, "content") else str(chunk)
+                    if text_chunk and isinstance(text_chunk, str):
+                        full_response += text_chunk
+                        yield f"data: {json.dumps({'type': 'token', 'content': text_chunk})}\n\n"
+
+            current_state = await _graph.aget_state(config)
+            if current_state.tasks and current_state.tasks[0].interrupts:
+                payload = current_state.tasks[0].interrupts[0].value
+                yield f"data: {json.dumps({'type': 'interrupt', 'payload': payload})}\n\n"
+                return  # Skip saving to history and returning text since we are paused
+            
+            if not full_response:
+                full_response = final_state_msg or "Sorry, I had a little trouble with that. Could you try again?"
+                yield f"data: {json.dumps({'type': 'token', 'content': full_response})}\n\n"
+                
+            error_fallbacks = [
+                "I'm having a little trouble. Can we stick to coffee orders for now?",
+                "Sorry, I'm having trouble understanding your request right now. Could you please try again?",
+                "I'm having trouble retrieving that information right now. Please try again.",
+                "Hey there! Sorry, I had a small hiccup. How can I help you today?",
+                "Sorry, I had a little trouble with that. Could you try again?",
+                "I'm having trouble updating your order right now. Please try again."
+            ]
+            
+            if full_response not in error_fallbacks:
+                save_messages(session_id, user_email, body.user_input, full_response)
+            
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'error', 'content': str(e)})}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+@router.post("/resume", response_model=ChatResponse)
+async def resume_chat(body: ResumeRequest, current_user: CurrentUser):
+    config = {
+        "configurable": {
+            "thread_id": body.session_id,
+            "user_id": current_user.email,
+        }
+    }
+    try:
+        final_state = await _graph.ainvoke(
+            Command(resume=body.payment_status),
+            config=config
+        )
+        response = (
+            (final_state.get("response_message") if isinstance(final_state, dict) else final_state.response_message)
+            or "Payment processed successfully!"
+        )
+        save_messages(body.session_id, current_user.email, "[Payment Completed]", response)
+        return ChatResponse(session_id=body.session_id, response=response)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Checkout resume error: {str(e)}")
+

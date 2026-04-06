@@ -134,7 +134,13 @@ def get_model(temperature: float = 0.0, model_name: str = None) -> ChatOpenAI:
     return _llm_pool.get_model(temperature=temperature, model_name=model_name)
 
 
-llm = get_model()  # Default instance
+def get_small_model(temperature: float = 0.0, model_name: str = None) -> ChatOpenAI:
+    """Get Small LLM instance from pool."""
+    return _llm_pool.get_model(temperature=temperature, model_name=model_name or Config.SMALL_LLM_MODEL)
+
+
+llm = get_model()  # Default large instance
+small_llm = get_small_model() # Default small instance
 
 
 # ============================================================

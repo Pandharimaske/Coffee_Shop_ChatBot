@@ -35,6 +35,7 @@ class Settings(BaseSettings):
 
     # ── LLM ───────────────────────────────────────────────────────────────────
     llm_model: str = "arcee-ai/trinity-large-preview:free"
+    small_llm_model: str = "arcee-ai/trinity-large-preview:free"
     llm_temperature: float = 0.0
     openrouter_api_key: str = ""
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
@@ -112,6 +113,7 @@ class Config:
     API_PORT = settings.api_port
 
     LLM_MODEL = settings.llm_model
+    SMALL_LLM_MODEL = settings.small_llm_model
     LLM_TEMPERATURE = settings.llm_temperature
     OPENROUTER_API_KEY = settings.openrouter_api_key
     OPENROUTER_BASE_URL = settings.openrouter_base_url

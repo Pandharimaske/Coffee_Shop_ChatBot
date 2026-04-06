@@ -91,9 +91,33 @@ export const chatAPI = {
       session_id: getSessionId(),
     }),
 
+  sendStream: async (userInput) => {
+    const body = { user_input: userInput, session_id: getSessionId() };
+    const headers = { "Content-Type": "application/json" };
+    const token = getToken();
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    const res = await fetch(`${BASE_URL}/chat/stream`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      throw new Error("Stream request failed");
+    }
+    return res.body; 
+  },
+
   // Load message history for current session (called on mount/refresh)
   getHistory: () =>
     request("GET", `/chat/history?session_id=${getSessionId()}`),
+
+  resumeChat: (paymentStatus) => 
+    request("POST", "/chat/resume", {
+      session_id: getSessionId(),
+      payment_status: paymentStatus
+    }),
 };
 
 // ── Orders ────────────────────────────────────────────────────────────────────
@@ -104,6 +128,12 @@ export const ordersAPI = {
   // Called whenever frontend cart changes
   updateActive: (items) => request("PUT", "/orders/active", { items }),
   clearActive: () => request("DELETE", "/orders/active"),
+};
+
+// ── Admin ─────────────────────────────────────────────────────────────────────
+
+export const adminAPI = {
+  chat: (query) => request("POST", "/admin/chat", { query }),
 };
 
 export { getSessionId, getToken };

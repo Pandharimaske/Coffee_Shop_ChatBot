@@ -7,12 +7,24 @@ from src.memory.schemas import UserMemory
 router = APIRouter(prefix="/user", tags=["user"])
 
 
+from src.memory.supabase_client import supabase
+
 @router.get("/me", response_model=UserResponse)
 async def get_me(current_user: CurrentUser):
+    # Fetch is_admin from profiles
+    is_admin = False
+    try:
+        res = supabase.table("coffee_shop_profiles").select("is_admin").eq("user_email", current_user.email).execute()
+        if res.data and res.data[0].get("is_admin"):
+            is_admin = True
+    except Exception:
+        pass
+        
     return UserResponse(
         id=current_user.id,
         email=current_user.email,
         username=current_user.username,
+        is_admin=is_admin,
     )
 
 

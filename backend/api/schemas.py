@@ -24,6 +24,7 @@ class UserResponse(BaseModel):
     id: str
     email: str
     username: Optional[str] = None
+    is_admin: bool = False
 
 
 # ── User / Preferences ────────────────────────────────────────────────────────

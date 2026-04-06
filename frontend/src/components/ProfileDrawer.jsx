@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef } from "react";
-import { FaTimes, FaUser, FaEnvelope, FaMapMarkerAlt, FaHeart, FaThumbsDown, FaExclamationTriangle, FaSave, FaPlus, FaTrash } from "react-icons/fa";
-import { MdEdit, MdCheckCircle } from "react-icons/md";
 import { userAPI } from "../services/api";
+import { X, User, Mail, MapPin, Heart, ThumbsDown, AlertTriangle, Save, Plus, Trash2, CheckCircle2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
-// ── Tag input for lists (likes / dislikes / allergies) ───────────────────────
-const TagInput = ({ tags, onChange, placeholder, color }) => {
+const TagInput = ({ tags, onChange, placeholder, colorClass }) => {
   const [input, setInput] = useState("");
 
   const add = () => {
@@ -18,45 +17,45 @@ const TagInput = ({ tags, onChange, placeholder, color }) => {
   const remove = (i) => onChange(tags.filter((_, idx) => idx !== i));
 
   return (
-    <div className="space-y-2">
-      <div className="flex flex-wrap gap-1.5">
-        {tags.map((tag, i) => (
-          <span key={i} className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium ${color}`}>
-            {tag}
-            <button onClick={() => remove(i)} className="hover:opacity-70 transition">
-              <FaTimes size={9} />
-            </button>
-          </span>
-        ))}
-      </div>
-      <div className="flex gap-2">
+    <div className="space-y-3">
+      {tags.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {tags.map((tag, i) => (
+            <span key={i} className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full font-bold tracking-wide uppercase ${colorClass}`}>
+              {tag}
+              <button onClick={() => remove(i)} className="hover:opacity-70 transition-opacity focus:outline-none">
+                <X size={10} strokeWidth={3} />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="relative">
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && add()}
           placeholder={placeholder}
-          className="flex-1 text-sm bg-[#f5efe6] border border-[#d4c0aa] rounded-lg px-3 py-1.5 text-[#4B3832] placeholder-[#9c7e6c] focus:outline-none focus:ring-1 focus:ring-[#4B3832]"
+          className="w-full bg-white/5 border border-white/10 rounded-xl pl-4 pr-12 py-3 text-white text-sm placeholder-[#a8a19c]/50 focus:outline-none focus:border-[#dfc18b]/50 focus:ring-1 focus:ring-[#dfc18b]/50 transition-all shadow-inner"
         />
-        <button onClick={add} className="bg-[#4B3832] text-white px-2.5 rounded-lg hover:bg-[#3a2d27] transition">
-          <FaPlus size={11} />
+        <button onClick={add} className="absolute right-2 top-2 bottom-2 bg-white/10 hover:bg-white/20 text-white w-8 rounded-lg flex items-center justify-center transition-colors focus:outline-none">
+          <Plus size={16} />
         </button>
       </div>
     </div>
   );
 };
 
-// ── Section wrapper ───────────────────────────────────────────────────────────
 const Section = ({ icon, title, children }) => (
-  <div className="bg-[#fefcf9] border border-[#e5d6c6] rounded-2xl p-4 space-y-3">
-    <div className="flex items-center gap-2 text-[#4B3832]">
-      <span className="text-[#b68d40]">{icon}</span>
-      <h3 className="text-sm font-bold uppercase tracking-wider">{title}</h3>
+  <div className="glass-panel border border-white/5 rounded-3xl p-6 relative overflow-hidden group hover:border-white/10 transition-colors">
+    <div className="flex items-center gap-2 text-white mb-5">
+      <span className="text-[#dfc18b]">{icon}</span>
+      <h3 className="text-xs font-black uppercase tracking-[0.15em]">{title}</h3>
     </div>
     {children}
   </div>
 );
 
-// ── Main Profile Drawer ───────────────────────────────────────────────────────
 const ProfileDrawer = ({ user, onClose }) => {
   const [prefs, setPrefs] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -73,13 +72,16 @@ const ProfileDrawer = ({ user, onClose }) => {
     }).catch(() => {});
   }, []);
 
-  // Close on click outside
   useEffect(() => {
     const handler = (e) => {
       if (drawerRef.current && !drawerRef.current.contains(e.target)) onClose();
     };
-    setTimeout(() => document.addEventListener("mousedown", handler), 100);
-    return () => document.removeEventListener("mousedown", handler);
+    // small delay before binding prevent immediate close when clicking avatar
+    const timer = setTimeout(() => document.addEventListener("mousedown", handler), 100);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("mousedown", handler);
+    };
   }, [onClose]);
 
   const handleSave = async () => {
@@ -101,172 +103,159 @@ const ProfileDrawer = ({ user, onClose }) => {
     }
   };
 
-  const avatar = (user.username || user.email)[0].toUpperCase();
+  const avatar = (user?.username || user?.email || "?")[0].toUpperCase();
 
   return (
-    <>
-      {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40" />
+    <AnimatePresence>
+      <div className="fixed inset-0 z-50 flex justify-end">
+        <motion.div 
+          initial={{ opacity: 0 }} 
+          animate={{ opacity: 1 }} 
+          exit={{ opacity: 0 }} 
+          className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        />
 
-      {/* Drawer */}
-      <div
-        ref={drawerRef}
-        className="fixed top-0 right-0 h-full w-full max-w-sm bg-[#F2E6D9] z-50 shadow-2xl flex flex-col overflow-hidden"
-        style={{ animation: "slideIn 0.25s ease-out" }}
-      >
-        <style>{`
-          @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to   { transform: translateX(0); opacity: 1; }
-          }
-        `}</style>
-
-        {/* Header */}
-        <div className="bg-[#4B3832] text-white p-5 flex items-center gap-4 flex-shrink-0">
-          <div className="w-14 h-14 rounded-full bg-[#b68d40] flex items-center justify-center text-2xl font-bold text-white shadow-lg">
-            {avatar}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-bold text-lg leading-tight truncate">
-              {user.username || user.email.split("@")[0]}
-            </p>
-            <p className="text-[#c8b09a] text-xs truncate">{user.email}</p>
-          </div>
-          <button onClick={onClose} className="text-[#c8b09a] hover:text-white transition ml-auto">
-            <FaTimes size={18} />
-          </button>
-        </div>
-
-        {/* Scrollable body */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
-
-          {/* Account info */}
-          <Section icon={<FaUser size={14} />} title="Account">
-            <div className="space-y-2 text-sm">
-              <div className="flex items-center gap-2 text-[#6b5245]">
-                <FaEnvelope size={12} className="text-[#9c7e6c]" />
-                <span className="truncate">{user.email}</span>
-              </div>
-              {user.id && (
-                <div className="flex items-center gap-2 text-[#9c7e6c] text-xs">
-                  <span>ID: {user.id.slice(0, 8)}…</span>
-                </div>
-              )}
-            </div>
-          </Section>
-
-          {!prefs ? (
-            <div className="flex justify-center py-8">
-              <div className="w-8 h-8 border-4 border-[#4B3832] border-t-transparent rounded-full animate-spin" />
-            </div>
-          ) : (
-            <>
-              {/* Display name + location */}
-              <Section icon={<MdEdit size={16} />} title="Profile">
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-xs text-[#9c7e6c] font-medium mb-1 block">Display name</label>
-                    <input
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                      placeholder="What should we call you?"
-                      className="w-full text-sm bg-[#f5efe6] border border-[#d4c0aa] rounded-lg px-3 py-2 text-[#4B3832] placeholder-[#9c7e6c] focus:outline-none focus:ring-1 focus:ring-[#4B3832]"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-[#9c7e6c] font-medium mb-1 block flex items-center gap-1">
-                      <FaMapMarkerAlt size={10} /> Location
-                    </label>
-                    <input
-                      value={editLocation}
-                      onChange={(e) => setEditLocation(e.target.value)}
-                      placeholder="e.g. Koregaon Park"
-                      className="w-full text-sm bg-[#f5efe6] border border-[#d4c0aa] rounded-lg px-3 py-2 text-[#4B3832] placeholder-[#9c7e6c] focus:outline-none focus:ring-1 focus:ring-[#4B3832]"
-                    />
-                  </div>
-                </div>
-              </Section>
-
-              {/* Likes */}
-              <Section icon={<FaHeart size={13} />} title="Likes">
-                <TagInput
-                  tags={prefs.likes || []}
-                  onChange={(val) => setPrefs({ ...prefs, likes: val })}
-                  placeholder="e.g. oat milk, sweet"
-                  color="bg-green-100 text-green-800"
-                />
-                <p className="text-xs text-[#9c7e6c]">The bot recommends based on these ☕</p>
-              </Section>
-
-              {/* Dislikes */}
-              <Section icon={<FaThumbsDown size={13} />} title="Dislikes">
-                <TagInput
-                  tags={prefs.dislikes || []}
-                  onChange={(val) => setPrefs({ ...prefs, dislikes: val })}
-                  placeholder="e.g. cinnamon, very sweet"
-                  color="bg-orange-100 text-orange-800"
-                />
-              </Section>
-
-              {/* Allergies */}
-              <Section icon={<FaExclamationTriangle size={13} />} title="Allergies">
-                <TagInput
-                  tags={prefs.allergies || []}
-                  onChange={(val) => setPrefs({ ...prefs, allergies: val })}
-                  placeholder="e.g. nuts, lactose"
-                  color="bg-red-100 text-red-800"
-                />
-                <p className="text-xs text-[#9c7e6c]">These are never recommended to you 🚫</p>
-              </Section>
-
-              {/* Last order read-only */}
-              {prefs.last_order && (
-                <Section icon={<FaUser size={13} />} title="Last order">
-                  <p className="text-sm text-[#6b5245]">{prefs.last_order}</p>
-                </Section>
-              )}
-
-              {/* Feedback read-only */}
-              {prefs.feedback?.length > 0 && (
-                <Section icon={<FaUser size={13} />} title="Your feedback">
-                  <ul className="space-y-1">
-                    {prefs.feedback.map((f, i) => (
-                      <li key={i} className="text-xs text-[#6b5245] border-l-2 border-[#b68d40] pl-2">{f}</li>
-                    ))}
-                  </ul>
-                </Section>
-              )}
-            </>
-          )}
-        </div>
-
-        {/* Save footer */}
-        {prefs && (
-          <div className="p-4 border-t border-[#d4c0aa] bg-[#f5efe6] flex-shrink-0">
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className={`w-full py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all ${
-                saved
-                  ? "bg-green-500 text-white"
-                  : "bg-[#4B3832] text-white hover:bg-[#3a2d27] active:scale-95"
-              }`}
-            >
-              {saved ? (
-                <><MdCheckCircle size={18} /> Memory saved!</>
-              ) : saving ? (
-                <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Saving…</>
-              ) : (
-                <><FaSave size={15} /> Save preferences</>
-              )}
+        <motion.div
+          ref={drawerRef}
+          initial={{ x: "100%" }}
+          animate={{ x: 0 }}
+          exit={{ x: "100%" }}
+          transition={{ type: "spring", damping: 30, stiffness: 300, mass: 0.8 }}
+          className="relative w-full max-w-[420px] bg-[#1a1714]/90 backdrop-blur-3xl h-full flex flex-col shadow-2xl border-l border-white/10"
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between p-6 shrink-0 border-b border-white/5">
+            <h2 className="text-xl font-black text-white tracking-tighter">Your Profile</h2>
+            <button onClick={onClose} className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white transition-colors focus:outline-none">
+              <X size={18} />
             </button>
-            <p className="text-center text-xs text-[#9c7e6c] mt-2">
-              The chatbot learns from these automatically
-            </p>
           </div>
-        )}
+
+          {/* Profile Identity */}
+          <div className="p-8 shrink-0 flex items-center gap-5">
+            <div className="relative">
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#dfc18b] to-[#a37c35] p-[2px] shadow-[0_0_30px_rgba(223,193,139,0.3)]">
+                <div className="w-full h-full bg-[#1a1714] rounded-full flex items-center justify-center text-3xl font-black text-[#dfc18b]">
+                  {avatar}
+                </div>
+              </div>
+            </div>
+            <div className="min-w-0">
+              <p className="font-black text-2xl text-white truncate tracking-tight">
+                {user?.username || user?.email?.split("@")[0]}
+              </p>
+              <div className="flex items-center gap-1.5 text-[#a8a19c] mt-1">
+                <Mail size={12} />
+                <p className="text-sm font-medium truncate">{user?.email}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Body */}
+          <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-4 custom-scrollbar">
+            {!prefs ? (
+              <div className="flex justify-center items-center h-40">
+                <div className="w-8 h-8 border-2 border-[#dfc18b] border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : (
+              <>
+                <Section icon={<User size={16} />} title="Identity & Location">
+                  <div className="space-y-4 relative z-10">
+                    <div>
+                      <label className="block text-[10px] font-bold text-[#a8a19c] uppercase tracking-widest pl-1 mb-1.5">Preferred Name</label>
+                      <input
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        placeholder="What should we call you?"
+                        className="w-full px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white placeholder-[#a8a19c]/50 focus:outline-none focus:border-[#dfc18b]/50 focus:ring-1 focus:ring-[#dfc18b]/50 transition-all text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-[#a8a19c] uppercase tracking-widest pl-1 mb-1.5 flex items-center gap-1">
+                        <MapPin size={10} /> Delivery Area
+                      </label>
+                      <input
+                        value={editLocation}
+                        onChange={(e) => setEditLocation(e.target.value)}
+                        placeholder="e.g. Area 51, Floor 3"
+                        className="w-full px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white placeholder-[#a8a19c]/50 focus:outline-none focus:border-[#dfc18b]/50 focus:ring-1 focus:ring-[#dfc18b]/50 transition-all text-sm"
+                      />
+                    </div>
+                  </div>
+                </Section>
+
+                <Section icon={<Heart size={16} />} title="Taste Preferences">
+                  <TagInput
+                    tags={prefs.likes || []}
+                    onChange={(val) => setPrefs({ ...prefs, likes: val })}
+                    placeholder="e.g. extra espresso, oat milk"
+                    colorClass="bg-[#dfc18b]/10 text-[#dfc18b] border border-[#dfc18b]/20"
+                  />
+                </Section>
+
+                <Section icon={<ThumbsDown size={16} />} title="Dislikes">
+                  <TagInput
+                    tags={prefs.dislikes || []}
+                    onChange={(val) => setPrefs({ ...prefs, dislikes: val })}
+                    placeholder="e.g. too sweet, cinnamon"
+                    colorClass="bg-red-500/10 text-red-400 border border-red-500/20"
+                  />
+                </Section>
+
+                <Section icon={<AlertTriangle size={16} />} title="Allergies">
+                  <TagInput
+                    tags={prefs.allergies || []}
+                    onChange={(val) => setPrefs({ ...prefs, allergies: val })}
+                    placeholder="e.g. peanuts, dairy"
+                    colorClass="bg-orange-500/10 text-orange-400 border border-orange-500/20"
+                  />
+                  {prefs.allergies?.length > 0 && (
+                    <p className="text-[10px] text-orange-400 font-bold uppercase tracking-widest mt-3 flex items-center gap-1">
+                      <AlertTriangle size={10} /> We will strictly avoid these.
+                    </p>
+                  )}
+                </Section>
+
+                {prefs.feedback?.length > 0 && (
+                  <Section icon={<User size={16} />} title="AI Insights">
+                    <ul className="space-y-3">
+                      {prefs.feedback.map((f, i) => (
+                        <li key={i} className="text-sm font-medium text-[#a8a19c] bg-white/5 p-3 rounded-xl border border-white/5">
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+                  </Section>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Footer Save */}
+          {prefs && (
+            <div className="p-6 shrink-0 border-t border-white/10 bg-[#1a1714]/80 backdrop-blur-xl">
+              <button
+                onClick={handleSave}
+                disabled={saving || saved}
+                className={`w-full py-4 rounded-full font-black text-xs tracking-widest uppercase flex items-center justify-center gap-2 transition-all duration-300 ${
+                  saved
+                    ? "bg-green-500 text-white shadow-lg"
+                    : "bg-gradient-to-r from-[#dfc18b] to-[#a37c35] text-[#1a1714] shadow-[0_10px_20px_rgba(223,193,139,0.2)] hover:scale-[1.02]"
+                }`}
+              >
+                {saved ? (
+                  <><CheckCircle2 size={16} /> Data Synced</>
+                ) : saving ? (
+                  <><div className="w-4 h-4 border-2 border-[#1a1714] border-t-transparent rounded-full animate-spin" /> Syncing</>
+                ) : (
+                  <><Save size={16} /> Save Memory Matrix</>
+                )}
+              </button>
+            </div>
+          )}
+        </motion.div>
       </div>
-    </>
+    </AnimatePresence>
   );
 };
 

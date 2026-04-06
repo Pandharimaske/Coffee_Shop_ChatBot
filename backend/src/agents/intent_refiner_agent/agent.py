@@ -7,7 +7,7 @@ from langgraph.types import Command
 from langgraph.graph import END
 
 from src.graph.state import CoffeeAgentState
-from src.utils.util import llm
+from src.utils.util import small_llm
 from src.agents.intent_refiner_agent.prompt import intent_refiner_prompt
 
 logger = logging.getLogger(__name__)
@@ -25,13 +25,22 @@ async def intent_refiner_agent(state: CoffeeAgentState):
     Returns:
         Command with refined user_input
     """
-    chain = intent_refiner_prompt | llm | StrOutputParser()
+    chain = intent_refiner_prompt | small_llm | StrOutputParser()
 
     try:
+        # Strip to clean role:content — avoids leaking LangChain metadata into the prompt
+        def _fmt(m) -> str:
+            role = "user" if m.__class__.__name__ == "HumanMessage" else "assistant"
+            content = m.content if isinstance(m.content, str) else str(m.content)
+            return f"{role}: {content}"
+
+        recent = state.messages[-6:]
+        formatted_messages = "\n".join(_fmt(m) for m in recent) or "(no prior messages)"
+
         # Invoke the refiner
         refined_query = await chain.ainvoke({
             "user_input": state.user_input,
-            "messages": state.messages,
+            "messages": formatted_messages,
             "chat_summary": state.chat_summary,
             "user_memory": str(state.user_memory),
         })

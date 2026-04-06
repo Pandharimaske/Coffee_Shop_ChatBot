@@ -8,8 +8,6 @@ from src.memory.supabase_client import supabase_admin as supabase
 logger = logging.getLogger(__name__)
 
 SESSIONS_TABLE  = "coffee_shop_sessions"
-MESSAGES_TABLE  = "coffee_shop_messages"
-
 
 # ── Sessions ──────────────────────────────────────────────────────────────────
 
@@ -42,7 +40,7 @@ def load_messages(session_id: str) -> List[BaseMessage]:
     """
     try:
         res = (
-            supabase.table(MESSAGES_TABLE)
+            supabase.table(SESSIONS_TABLE)
             .select("messages")
             .eq("session_id", session_id)
             .execute()
@@ -74,7 +72,7 @@ def save_messages(session_id: str, user_email: str, user_input: str, bot_respons
 
         # Load existing messages
         res = (
-            supabase.table(MESSAGES_TABLE)
+            supabase.table(SESSIONS_TABLE)
             .select("messages")
             .eq("session_id", session_id)
             .execute()
@@ -88,13 +86,11 @@ def save_messages(session_id: str, user_email: str, user_input: str, bot_respons
             {"role": "assistant", "content": bot_response,  "timestamp": now},
         ]
 
-        # Upsert single row
-        supabase.table(MESSAGES_TABLE).upsert({
-            "session_id": session_id,
-            "user_email": user_email,
+        # Update single row in sessions table
+        supabase.table(SESSIONS_TABLE).update({
             "messages": updated,
-            "updated_at": now,
-        }, on_conflict="session_id").execute()
+            "last_active": now,
+        }).eq("session_id", session_id).execute()
 
     except Exception as e:
         logger.error(f"save_messages failed for session {session_id}: {e}")

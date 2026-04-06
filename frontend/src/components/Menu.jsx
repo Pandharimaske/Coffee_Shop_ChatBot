@@ -1,113 +1,119 @@
 import { useEffect, useState, useRef } from "react";
-import { MdAddCircle } from "react-icons/md";
-import { FaSearch, FaTimes, FaStar } from "react-icons/fa";
+import { Plus, Search, X, Star, ChevronRight, Check, Minus } from "lucide-react";
 import { useCart } from "../context/CartContext";
 import { productsAPI } from "../services/api";
+import { motion, AnimatePresence } from "framer-motion";
 
-// ── Add-to-cart burst animation ───────────────────────────────────────────────
-const CartBurst = ({ active }) => (
-  <span className={`absolute inset-0 rounded-2xl pointer-events-none transition-all duration-300 ${
-    active ? "ring-4 ring-[#4B3832] ring-opacity-40 scale-105" : ""
-  }`} />
-);
-
-// ── Product Detail Modal ──────────────────────────────────────────────────────
 const ProductModal = ({ product, onClose, onAdd, added }) => {
+  const [qty, setQty] = useState(1);
+
   if (!product) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      onClick={onClose}
-    >
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-
-      {/* Modal */}
-      <div
-        className="relative bg-[#fefcf9] rounded-3xl shadow-2xl max-w-md w-full overflow-hidden animate-fade-in"
-        onClick={(e) => e.stopPropagation()}
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-md overflow-y-auto"
+        onClick={onClose}
       >
-        {/* Image */}
-        <div className="relative h-56 overflow-hidden">
-          <img
-            src={product.image_url || "/images/Latte.jpg"}
-            alt={product.name}
-            className="w-full h-full object-cover"
-            onError={(e) => { e.target.src = "/images/Latte.jpg"; }}
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-
-          {/* Close button */}
-          <button
-            onClick={onClose}
-            className="absolute top-3 right-3 bg-white/90 text-[#4B3832] p-2 rounded-full hover:bg-white transition shadow"
+        <div className="min-h-[100dvh] flex items-center justify-center p-4 w-full cursor-pointer pointer-events-none">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            className="relative bg-[#1a1714] border border-white/10 rounded-[2rem] shadow-2xl max-w-md w-full overflow-hidden cursor-default pointer-events-auto my-8"
+            onClick={(e) => e.stopPropagation()}
           >
-            <FaTimes size={14} />
-          </button>
-
-          {/* Rating badge */}
-          {product.rating && (
-            <div className="absolute bottom-3 left-4 flex items-center gap-1 bg-[#ffe8b3] text-[#4B3832] text-sm font-bold px-3 py-1 rounded-full shadow">
-              <FaStar size={12} className="text-amber-500" />
-              {product.rating}
+            <div className="relative h-64 overflow-hidden">
+              <motion.img
+                layoutId={`img-${product.id}`}
+                src={product.image_url || "https://images.unsplash.com/photo-1541167760496-1628856ab772?auto=format&fit=crop&q=80&w=600&h=600"}
+                alt={product.name}
+                className="w-full h-full object-cover mix-blend-luminosity hover:mix-blend-normal transition-all duration-700"
+                onError={(e) => { e.target.src = "https://images.unsplash.com/photo-1541167760496-1628856ab772?auto=format&fit=crop&q=80&w=600&h=600"; }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#1a1714] to-transparent opacity-80" />
+              
+              <button
+                onClick={onClose}
+                className="absolute top-4 right-4 bg-black/40 text-white p-2 text-xs rounded-full hover:bg-white border border-white/20 hover:text-black transition backdrop-blur-md"
+              >
+                <X size={16} />
+              </button>
+              {product.rating && (
+                <div className="absolute bottom-4 left-6 flex items-center gap-1.5 bg-[#dfc18b] text-[#1a1714] text-xs font-bold px-3 py-1 rounded-full shadow-lg">
+                  <Star size={12} fill="currentColor" />
+                  {product.rating}
+                </div>
+              )}
             </div>
-          )}
-        </div>
 
-        {/* Content */}
-        <div className="p-6">
-          <div className="flex justify-between items-start mb-2">
-            <div>
-              <h2 className="text-2xl font-bold text-[#4B3832]">{product.name}</h2>
-              <span className="text-sm text-[#9c7e6c] bg-[#f5efe6] px-2 py-0.5 rounded-full">
-                {product.category}
-              </span>
-            </div>
-            <span className="text-2xl font-bold text-[#b68d40]">₹{product.price?.toFixed(2)}</span>
-          </div>
-
-          {/* Description */}
-          {product.description && (
-            <p className="text-sm text-[#6b5245] mt-3 leading-relaxed">{product.description}</p>
-          )}
-
-          {/* Ingredients */}
-          {product.ingredients?.length > 0 && (
-            <div className="mt-4">
-              <p className="text-xs font-semibold text-[#9c7e6c] uppercase tracking-wider mb-2">Ingredients</p>
-              <div className="flex flex-wrap gap-1.5">
-                {product.ingredients.map((ing, i) => (
-                  <span key={i} className="text-xs bg-[#e8ddd0] text-[#4B3832] px-2.5 py-1 rounded-full">
-                    {ing}
+            <div className="p-8">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <motion.h2 layoutId={`title-${product.id}`} className="text-3xl font-black text-white tracking-tighter">{product.name}</motion.h2>
+                  <span className="text-xs text-[#a37c35] font-bold tracking-widest uppercase mt-1 block">
+                    {product.category}
                   </span>
-                ))}
+                </div>
+                <span className="text-2xl font-bold text-[#dfc18b]">₹{product.price?.toFixed(2)}</span>
               </div>
-            </div>
-          )}
 
-          {/* Add to cart button */}
-          <button
-            onClick={() => onAdd(product)}
-            className={`mt-5 w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2 ${
-              added
-                ? "bg-green-500 text-white scale-95"
-                : "bg-[#4B3832] text-white hover:bg-[#3a2d27] active:scale-95"
-            }`}
-          >
-            {added ? (
-              <>✓ Added to order</>
-            ) : (
-              <><MdAddCircle size={20} /> Add to Order — ₹{product.price?.toFixed(2)}</>
-            )}
-          </button>
+              {product.description && (
+                <p className="text-sm text-[#a8a19c] mt-4 leading-relaxed">{product.description}</p>
+              )}
+
+              {product.ingredients?.length > 0 && (
+                <div className="mt-6">
+                  <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-3">Ingredients</p>
+                  <div className="flex flex-wrap gap-2">
+                    {product.ingredients.map((ing, i) => (
+                      <span key={i} className="text-xs border border-white/10 text-[#a8a19c] px-3 py-1.5 rounded-full">
+                        {ing}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-8 border-t border-white/5 pt-6">
+                <h3 className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-3">Quantity</h3>
+                <div className="flex items-center gap-3">
+                  <button onClick={() => setQty(Math.max(1, qty - 1))} className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-white flex items-center justify-center transition focus:outline-none">
+                    <Minus size={16} />
+                  </button>
+                  <span className="w-8 text-center font-black text-xl text-white">{qty}</span>
+                  <button onClick={() => setQty(qty + 1)} className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-white flex items-center justify-center transition focus:outline-none">
+                    <Plus size={16} />
+                  </button>
+                </div>
+              </div>
+
+              <button
+                onClick={() => onAdd({ ...product, quantity: qty })}
+                className={`mt-8 w-full py-4 rounded-2xl font-bold text-sm transition-all duration-300 flex items-center justify-center gap-2 relative overflow-hidden ${
+                  added
+                    ? "bg-green-500 text-white scale-95"
+                    : "bg-gradient-to-r from-[#dfc18b] to-[#a37c35] text-[#1a1714] shadow-[0_10px_30px_rgba(223,193,139,0.2)] hover:scale-[1.02]"
+                }`}
+              >
+                {added ? (
+                  <><Check size={18} /> Added to order</>
+                ) : (
+                  <><Plus size={18} /> Add {qty} to Order — ₹{(product.price * qty).toFixed(2)}</>
+                )}
+              </button>
+            </div>
+          </motion.div>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </AnimatePresence>
   );
 };
 
-// ── Main Menu ─────────────────────────────────────────────────────────────────
 const Menu = () => {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState(["All"]);
@@ -116,18 +122,8 @@ const Menu = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const [addedItems, setAddedItems] = useState({});   // name → bool for burst
   const [modalAdded, setModalAdded] = useState(false);
   const { addToCart } = useCart();
-  const burstTimers = useRef({});
-
-  const placeholders = ["Search for latte...", "Search for cappuccino...", "Search for espresso...", "Search for mocha..."];
-  const [placeholderIndex, setPlaceholderIndex] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(() => setPlaceholderIndex((p) => (p + 1) % placeholders.length), 3000);
-    return () => clearInterval(interval);
-  }, []);
 
   useEffect(() => {
     productsAPI.getAll()
@@ -145,182 +141,126 @@ const Menu = () => {
     return matchCat && matchSearch;
   });
 
-  const handleAdd = (product, fromModal = false) => {
-    addToCart(product);
-
-    // Burst animation on card
-    setAddedItems((prev) => ({ ...prev, [product.name]: true }));
-    if (burstTimers.current[product.name]) clearTimeout(burstTimers.current[product.name]);
-    burstTimers.current[product.name] = setTimeout(() => {
-      setAddedItems((prev) => ({ ...prev, [product.name]: false }));
-    }, 700);
-
-    // Modal added state
-    if (fromModal) {
-      setModalAdded(true);
-      setTimeout(() => setModalAdded(false), 1200);
-    }
+  const handleAdd = (productObj) => {
+    // Check if the productObj already has a quantity (passed from the modal)
+    // If it doesn't, default to 1 (when clicking "+" on the grid)
+    const productToAdd = productObj.quantity !== undefined ? productObj : { ...productObj, quantity: 1 };
+    
+    addToCart(productToAdd);
+    setModalAdded(true);
+    setTimeout(() => setModalAdded(false), 1200);
   };
-
-  const openModal = (product) => {
-    setSelectedProduct(product);
-    setModalAdded(false);
-  };
-
-  const closeModal = () => setSelectedProduct(null);
 
   if (loading) return (
-    <div className="min-h-screen bg-[#F2E6D9] flex items-center justify-center">
-      <div className="w-10 h-10 border-4 border-[#4B3832] border-t-transparent rounded-full animate-spin" />
+    <div className="min-h-[60vh] flex items-center justify-center">
+      <div className="w-10 h-10 border-2 border-[#dfc18b] border-t-transparent rounded-full animate-spin" />
     </div>
   );
 
   if (error) return (
-    <div className="min-h-screen bg-[#F2E6D9] flex items-center justify-center">
+    <div className="min-h-[60vh] flex items-center justify-center">
       <p className="text-red-500">{error}</p>
     </div>
   );
 
   return (
-    <>
-      <style>{`
-        @keyframes fade-in {
-          from { opacity: 0; transform: scale(0.95) translateY(8px); }
-          to   { opacity: 1; transform: scale(1) translateY(0); }
-        }
-        .animate-fade-in { animation: fade-in 0.2s ease-out; }
-
-        @keyframes pop {
-          0%   { transform: scale(1); }
-          40%  { transform: scale(1.22); }
-          100% { transform: scale(1); }
-        }
-        .animate-pop { animation: pop 0.35s cubic-bezier(.36,.07,.19,.97); }
-
-        @keyframes added-pill {
-          0%   { opacity: 0; transform: translateY(4px) scale(0.9); }
-          20%  { opacity: 1; transform: translateY(0) scale(1); }
-          80%  { opacity: 1; }
-          100% { opacity: 0; transform: translateY(-6px); }
-        }
-        .animate-added-pill { animation: added-pill 0.7s ease-out forwards; }
-      `}</style>
-
-      <div className="min-h-screen bg-[#F2E6D9] text-[#4B3832] px-4 py-6">
-
-        {/* Search + Filter */}
-        <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-          <div className="relative w-full md:w-1/2 max-w-md">
-            <FaSearch className="absolute top-3.5 left-3 text-[#9c7e6c]" />
-            <input
-              type="text"
-              placeholder={placeholders[placeholderIndex]}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 rounded-full bg-[#f5efe6] text-[#4B3832] placeholder-[#9c7e6c] border border-[#c8b09a] focus:outline-none focus:ring-2 focus:ring-[#4B3832] shadow-inner transition-all"
-            />
-          </div>
-
-          <div className="flex flex-wrap justify-center gap-2">
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                  selectedCategory === cat
-                    ? "bg-[#4B3832] text-white shadow-md"
-                    : "bg-[#e0d3c0] text-[#4B3832] hover:bg-[#d1bfa5]"
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
+    <div className="space-y-10">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-end gap-6 mb-8 mt-4">
+        <div className="space-y-4">
+           <h1 className="text-4xl md:text-5xl font-black text-white tracking-tighter">
+             The <span className="text-gradient-gold">Collection</span>
+           </h1>
+           <p className="text-[#a8a19c] max-w-sm text-sm">Finely crafted espresso beverages, artisan pastries, and seasonal reserves.</p>
         </div>
-
-        {/* Grid */}
-        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {filtered.length === 0 ? (
-            <p className="col-span-full text-center text-[#9c7e6c]">No matching items found ☕</p>
-          ) : (
-            filtered.map((item) => {
-              const isAdded = addedItems[item.name];
-              return (
-                <div
-                  key={item.id}
-                  className={`relative bg-[#fefcf9] border border-[#e5d6c6] shadow rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 cursor-pointer ${
-                    isAdded ? "ring-2 ring-[#4B3832]" : ""
-                  }`}
-                  onClick={() => openModal(item)}
-                >
-                  <CartBurst active={isAdded} />
-
-                  <div className="relative">
-                    <img
-                      src={item.image_url || "/images/Latte.jpg"}
-                      alt={item.name}
-                      className="w-full h-48 object-cover"
-                      onError={(e) => { e.target.src = "/images/Latte.jpg"; }}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
-                    {item.rating && (
-                      <div className="absolute top-2 right-2 flex items-center gap-1 bg-[#ffe8b3] text-[#4B3832] text-xs font-bold px-2 py-1 rounded-full shadow">
-                        <FaStar size={10} className="text-amber-500" /> {item.rating}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="p-4">
-                    <h3 className="text-base font-semibold leading-tight">{item.name}</h3>
-                    <p className="text-xs text-[#9c7e6c] mt-0.5 mb-3">{item.category}</p>
-
-                    {/* Description preview */}
-                    {item.description && (
-                      <p className="text-xs text-[#7a6255] leading-relaxed mb-3 line-clamp-2">
-                        {item.description}
-                      </p>
-                    )}
-
-                    <div className="flex justify-between items-center">
-                      <p className="text-lg font-bold text-[#b68d40]">₹{item.price?.toFixed(2)}</p>
-
-                      {/* Add button with animation */}
-                      <div className="relative">
-                        {isAdded && (
-                          <span className="absolute -top-7 left-1/2 -translate-x-1/2 text-xs font-semibold text-white bg-[#4B3832] px-2 py-0.5 rounded-full whitespace-nowrap animate-added-pill pointer-events-none">
-                            Added!
-                          </span>
-                        )}
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleAdd(item); }}
-                          className={`transition-all duration-200 ${isAdded ? "text-green-600 animate-pop" : "text-[#4B3832] hover:text-[#3a2d27] hover:scale-110"}`}
-                        >
-                          <MdAddCircle size={32} />
-                        </button>
-                      </div>
-                    </div>
-
-                    <p className="text-xs text-[#9c7e6c] mt-2 hover:text-[#4B3832] transition-colors">
-                      Tap for details →
-                    </p>
-                  </div>
-                </div>
-              );
-            })
-          )}
+        
+        <div className="w-full md:w-auto relative group">
+          <Search className="absolute top-3.5 left-4 text-[#a8a19c] group-focus-within:text-[#dfc18b] transition-colors" size={18} />
+          <input
+            type="text"
+            placeholder="Search menu..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full md:w-64 pl-12 pr-4 py-3 rounded-full bg-white/5 border border-white/10 text-white placeholder-[#a8a19c] focus:outline-none focus:border-[#dfc18b]/50 focus:ring-1 focus:ring-[#dfc18b]/50 focus:bg-white/10 transition-all font-medium text-sm border focus:ring-opacity-50 !outline-none"
+          />
         </div>
       </div>
 
-      {/* Product Detail Modal */}
-      {selectedProduct && (
-        <ProductModal
-          product={selectedProduct}
-          onClose={closeModal}
-          onAdd={(p) => handleAdd(p, true)}
-          added={modalAdded}
-        />
-      )}
-    </>
+      {/* Filter Tabs */}
+      <div className="flex flex-wrap gap-2 mb-12">
+        {categories.map((cat) => (
+          <button
+            key={cat}
+            onClick={() => setSelectedCategory(cat)}
+            className={`px-6 py-2 rounded-full text-[10px] font-bold tracking-widest uppercase transition-all duration-300 border ${
+              selectedCategory === cat
+                ? "bg-[#dfc18b] text-[#1a1714] border-[#dfc18b]"
+                : "bg-transparent text-[#a8a19c] border-white/10 hover:border-white/30 hover:text-white lg:hover:w-auto"
+            }`}
+          >
+            {cat}
+          </button>
+        ))}
+      </div>
+
+      {/* Masonry-style Grid */}
+      <motion.div layout className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 pb-20">
+        <AnimatePresence>
+          {filtered.length === 0 && (
+            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="col-span-full text-center text-[#a8a19c] py-20">
+              No matching items found ☕
+            </motion.p>
+          )}
+          {filtered.map((item) => (
+            <motion.div
+              layout
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ duration: 0.3 }}
+              key={item.id}
+              className="group glass-card glass-card-hover rounded-[2rem] overflow-hidden cursor-pointer flex flex-col"
+              onClick={() => {
+                setSelectedProduct(item);
+              }}
+            >
+              <div className="relative h-56 overflow-hidden">
+                <motion.img
+                  layoutId={`img-${item.id}`}
+                  src={item.image_url || "https://images.unsplash.com/photo-1541167760496-1628856ab772?auto=format&fit=crop&q=80&w=600&h=600"}
+                  alt={item.name}
+                  className="w-full h-full object-cover mix-blend-luminosity group-hover:mix-blend-normal group-hover:scale-110 transition-all duration-700"
+                  onError={(e) => { e.target.src = "https://images.unsplash.com/photo-1541167760496-1628856ab772?auto=format&fit=crop&q=80&w=600&h=600"; }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#1a1714] via-transparent to-transparent opacity-90" />
+              </div>
+
+              <div className="p-6 flex-grow flex flex-col justify-between relative -mt-[4.5rem] bg-gradient-to-t from-[#1a1714] to-transparent">
+                <div>
+                  <motion.h3 layoutId={`title-${item.id}`} className="text-xl font-bold text-white tracking-tight leading-tight mb-2 drop-shadow-md">{item.name}</motion.h3>
+                  <p className="text-[9px] text-[#dfc18b] font-bold tracking-[0.2em] uppercase mb-4 opacity-80">{item.category}</p>
+                </div>
+                
+                <div className="flex justify-between items-end mt-4">
+                  <p className="text-lg font-bold text-[#dfc18b]">₹{item.price?.toFixed(2)}</p>
+                  <button className="w-10 h-10 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-white group-hover:bg-[#dfc18b] group-hover:text-[#1a1714] transition-all hover:scale-110">
+                    <Plus size={18} />
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </motion.div>
+
+      {/* Modal */}
+      <ProductModal
+        product={selectedProduct}
+        onClose={() => setSelectedProduct(null)}
+        onAdd={(p) => handleAdd(p)}
+        added={modalAdded}
+      />
+    </div>
   );
 };
 

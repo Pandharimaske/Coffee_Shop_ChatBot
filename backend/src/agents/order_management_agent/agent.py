@@ -3,8 +3,9 @@
 import logging
 from typing import List
 from langchain_core.messages import AIMessage
-from langgraph.types import Command
+from langgraph.types import Command, interrupt
 from langgraph.graph import END
+from langgraph.errors import GraphInterrupt
 
 from src.utils.util import llm
 from src.graph.state import CoffeeAgentState, ProductItem
@@ -41,14 +42,15 @@ def _format_order_summary(order: List[ProductItem], final_price: float) -> str:
     return f"Here's your order:\n" + "\n".join(lines) + f"\n\n🧾 Total: ₹{final_price:.2f}\n\nShall I confirm this order?"
 
 
-def _mock_receipt(order: List[ProductItem], final_price: float) -> str:
+def _mock_receipt(order: List[ProductItem], final_price: float, order_id: str = None) -> str:
     lines = [f"  • {item.name} x{item.quantity} = ₹{item.total_price:.2f}" for item in order]
-    return (
+    receipt = (
         f"✅ Order confirmed! Here's your receipt:\n" + "\n".join(lines) +
-        f"\n\n🧾 Total: ₹{final_price:.2f}\n\n"
-        f"📧 A receipt has been sent to your email.\n"
-        f"💳 Complete your payment here: https://merrysway.coffee/pay/mock-txn-1234"
+        f"\n\n🧾 **Total: ₹{final_price:.2f}**\n\n"
+        f"Your order has been placed successfully. "
+        f"You can view it anytime under **Order History** on the Orders page."
     )
+    return receipt
 
 
 # ── Main agent ────────────────────────────────────────────────────────────────
@@ -89,13 +91,24 @@ async def order_management_agent(state: CoffeeAgentState, config: RunnableConfig
                 msg = "You don't have anything in your order yet. Want to start one?"
                 return Command(update={"response_message": msg, "messages": [AIMessage(content=msg)]}, goto=END)
 
-            receipt = _mock_receipt(existing_order, state.final_price)
-            if user_id != "anonymous":
-                confirm_order(user_id, existing_order, state.final_price)
-            return Command(
-                update={"response_message": receipt, "messages": [AIMessage(content=receipt)], "order": [], "final_price": 0.0},
-                goto=END
-            )
+            # Trigger HITL Order Confirmation & Payment
+            payment_status = interrupt({"action": "order_confirmation", "total": state.final_price})
+
+            if payment_status == "payment_success":
+                order_id = None
+                if user_id != "anonymous":
+                    order_id = confirm_order(user_id, existing_order, state.final_price)
+                receipt = _mock_receipt(existing_order, state.final_price, order_id)
+                return Command(
+                    update={"response_message": receipt, "messages": [AIMessage(content=receipt)], "order": [], "final_price": 0.0},
+                    goto=END
+                )
+            else:
+                msg = "Checkout was cancelled. Your order is still saved in your cart."
+                return Command(
+                    update={"response_message": msg, "messages": [AIMessage(content=msg)]},
+                    goto=END
+                )
 
         # ── CANCEL ────────────────────────────────────────────────────────────
         elif action == OrderAction.CANCEL:
@@ -127,7 +140,18 @@ async def order_management_agent(state: CoffeeAgentState, config: RunnableConfig
             total = round(total, 2)
 
             if not new_order:
-                msg = f"Sorry, I couldn't find any of those items on our menu: {', '.join(unavailable)}. Try browsing our menu first!"
+                from src.rag.retriever import search_products
+                recommendations = []
+                for u in unavailable:
+                    recs = search_products(u, top_k=2)
+                    if recs:
+                        recs_str = " or ".join([r.get("name") for r in recs])
+                        recommendations.append(f"{recs_str} instead of {u}")
+                
+                if recommendations:
+                    msg = f"Sorry, we don't serve {', '.join(unavailable)}. However, we highly recommend trying our {', '.join(recommendations)}! Would you like me to add that to your order?"
+                else:
+                    msg = f"Sorry, I couldn't find any of those items on our menu: {', '.join(unavailable)}."
                 return Command(update={"response_message": msg, "messages": [AIMessage(content=msg)]}, goto=END)
 
             summary = _format_order_summary(new_order, total)
@@ -200,6 +224,9 @@ async def order_management_agent(state: CoffeeAgentState, config: RunnableConfig
                 goto=END
             )
 
+    except GraphInterrupt:
+        # LangGraph HITL needs this bubble up
+        raise
     except Exception as e:
         logger.error(f"order_management_agent failed: {e}", exc_info=True)
         msg = "Sorry, I ran into an issue processing your order. Please try again."

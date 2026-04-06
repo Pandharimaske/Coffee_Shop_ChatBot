@@ -3,6 +3,7 @@ from api.routers.users import router as users_router
 from api.routers.chat import router as chat_router
 from api.routers.orders import router as orders_router
 from api.routers.products import router as products_router
+# from api.routers.admin import router as admin_router
 
 __all__ = [
     "auth_router",
@@ -10,4 +11,5 @@ __all__ = [
     "chat_router",
     "orders_router",
     "products_router",
+    # "admin_router",
 ]

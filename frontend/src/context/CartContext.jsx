@@ -64,13 +64,14 @@ export const CartProvider = ({ children }) => {
   const addToCart = (product) => {
     setCartItems((prev) => {
       const existing = prev.find((item) => item.name === product.name);
+      const qtyToAdd = product.quantity || 1;
       const updated = existing
         ? prev.map((item) =>
             item.name === product.name
-              ? { ...item, quantity: item.quantity + 1 }
+              ? { ...item, quantity: item.quantity + qtyToAdd }
               : item
           )
-        : [...prev, { ...product, quantity: 1 }];
+        : [...prev, { ...product, quantity: qtyToAdd }];
       scheduleSync(updated);
       return updated;
     });

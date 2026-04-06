@@ -4,14 +4,14 @@ import logging
 from langgraph.types import Command
 from langgraph.graph import END
 
-from src.utils.util import llm
+from src.utils.util import small_llm
 from src.agents.guard_agent.schema import GuardDecision
 from src.agents.guard_agent.prompt import guard_prompt
 from src.graph.state import CoffeeAgentState
 
 logger = logging.getLogger(__name__)
 
-_chain = guard_prompt | llm.with_structured_output(GuardDecision)
+_chain = guard_prompt | small_llm.with_structured_output(GuardDecision)
 
 
 async def guard_agent(state: CoffeeAgentState) -> Command:

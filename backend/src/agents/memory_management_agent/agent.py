@@ -1,10 +1,11 @@
 """Memory Agent - Extracts and persists user preferences from conversation."""
 
 import logging
-from langgraph.types import Command
+from langgraph.types import Command, interrupt
+from langgraph.errors import GraphInterrupt
 from langchain_core.runnables import RunnableConfig
 
-from src.utils.util import llm
+from src.utils.util import small_llm
 from src.graph.state import CoffeeAgentState
 from src.memory.memory_manager import (
     save_user_memory,
@@ -17,7 +18,7 @@ from src.agents.memory_management_agent.schema import MemoryIntent
 
 logger = logging.getLogger(__name__)
 
-_extractor = memory_extraction_prompt | llm.with_structured_output(MemoryIntent)
+_extractor = memory_extraction_prompt | small_llm.with_structured_output(MemoryIntent)
 
 
 async def memory_agent(state: CoffeeAgentState, config: RunnableConfig) -> Command:
@@ -38,6 +39,16 @@ async def memory_agent(state: CoffeeAgentState, config: RunnableConfig) -> Comma
         })
 
         if not intent.has_updates():
+            return Command(goto="intent_refiner")
+
+        # Trigger HITL before applying
+        status = interrupt({
+            "action": "memory_validation",
+            "details": intent.model_dump()
+        })
+
+        if status == "reject":
+            logger.info("User rejected memory update via HITL.")
             return Command(goto="intent_refiner")
 
         # Apply updates
@@ -63,6 +74,9 @@ async def memory_agent(state: CoffeeAgentState, config: RunnableConfig) -> Comma
             goto="intent_refiner"
         )
 
+    except GraphInterrupt:
+        # Pass LangGraph standard interrupt up
+        raise
     except Exception as e:
         logger.error(f"memory_agent failed: {e}", exc_info=True)
         return Command(goto="intent_refiner")
