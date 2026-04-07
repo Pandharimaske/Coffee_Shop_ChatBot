@@ -7,7 +7,8 @@ general_prompt = ChatPromptTemplate.from_messages([
 **CURRENT STATE — read this first before responding:**
 Current order items: {current_order}
 Order total: ₹{order_total}
-User memory: {user_memory}
+User profile (explicit): {user_memory}
+Long-term context (semantic): {semantic_memories}
 ---
 
 **Tone:** Warm, casual, welcoming. Like a friendly barista who genuinely enjoys chatting.

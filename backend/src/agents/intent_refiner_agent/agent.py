@@ -1,30 +1,26 @@
-"""Intent Refiner Agent - Resolves context in user queries."""
-
 import logging
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.messages import HumanMessage
+from langchain_core.runnables import RunnableConfig
 from langgraph.types import Command
 from langgraph.graph import END
 
 from src.graph.state import CoffeeAgentState
 from src.utils.util import small_llm
 from src.agents.intent_refiner_agent.prompt import intent_refiner_prompt
+from src.memory.mem0_manager import mem0_manager
 
 logger = logging.getLogger(__name__)
 
 
-async def intent_refiner_agent(state: CoffeeAgentState):
+async def intent_refiner_agent(state: CoffeeAgentState, config: RunnableConfig):
     """
     Refines the user query by resolving context (e.g., 'it', 'the usual').
     
     Uses chat history and user memory to make references explicit.
-    
-    Args:
-        state: Current conversation state
-        
-    Returns:
-        Command with refined user_input
+    Also retrieves relevant long-term semantic context from Mem0.
     """
+    user_id = config.get("configurable", {}).get("user_id", "anonymous")
     chain = intent_refiner_prompt | small_llm | StrOutputParser()
 
     try:
@@ -48,10 +44,19 @@ async def intent_refiner_agent(state: CoffeeAgentState):
         refined = refined_query.strip()
         logger.debug(f"Intent refined: '{state.user_input}' -> '{refined}'")
 
+        # --- MEM0 RETRIEVAL: Search for long-term context ---
+        semantic_context = ""
+        if user_id != "anonymous":
+            semantic_context = mem0_manager.search_memories(refined, user_id=user_id)
+            if semantic_context:
+                logger.info(f"Retrieved Mem0 context for {user_id}: {semantic_context[:50]}...")
+        # ----------------------------------------------------
+
         return Command(
             update={
                 "user_input": refined,
                 "messages": [HumanMessage(content=refined)],
+                "semantic_memories": semantic_context, # Syncing the state key!
             },
             goto="router"
         )

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any
 
 from src.memory.schemas import UserMemory
@@ -45,7 +45,7 @@ def save_user_memory(user_email: str, memory: UserMemory) -> None:
     try:
         data = memory.model_dump()
         data["user_email"] = email
-        data["last_updated"] = datetime.now().isoformat()
+        data["last_updated"] = datetime.now(timezone.utc).isoformat()
         
         # EXTREME LOGGING for debugging
         logger.info(f"--- UPSERT ATTEMPT: {TABLE} ---")

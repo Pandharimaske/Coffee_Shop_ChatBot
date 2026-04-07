@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List
 import logging
 
@@ -19,14 +19,14 @@ def get_or_create_session(session_id: str, user_email: str) -> None:
         res = supabase.table(SESSIONS_TABLE).select("session_id").eq("session_id", sid).execute()
         if res.data:
             supabase.table(SESSIONS_TABLE).update(
-                {"last_active": datetime.now().isoformat()}
+                {"last_active": datetime.now(timezone.utc).isoformat()}
             ).eq("session_id", sid).execute()
         else:
             supabase.table(SESSIONS_TABLE).insert({
                 "session_id": sid,
                 "user_email": email,
-                "created_at": datetime.now().isoformat(),
-                "last_active": datetime.now().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "last_active": datetime.now(timezone.utc).isoformat(),
             }).execute()
             logger.info(f"New session: {sid} for {email}")
     except Exception as e:
@@ -75,7 +75,7 @@ def append_messages(session_id: str, user_email: str, new_messages: List[dict]) 
     """
     sid = str(session_id).lower().strip()
     email = str(user_email).lower().strip()
-    now = datetime.now().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
     
     try:
         # Prepare the payload for JSONB concatenation

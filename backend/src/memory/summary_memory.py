@@ -1,5 +1,5 @@
 from src.memory.supabase_client import supabase
-from datetime import datetime
+from datetime import datetime, timezone
 from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
 from src.graph.state import ProductItem
 from typing import Optional , List , Tuple
@@ -28,7 +28,7 @@ def save_messages(id: int, messages: list[BaseMessage]):
     supabase.table("summaries").upsert({
         "id":id , 
         "messages": serialized , 
-        "last_updated": datetime.now().isoformat()
+        "last_updated": datetime.now(timezone.utc).isoformat()
     }).execute()
 
 
@@ -42,7 +42,7 @@ def save_summary(id: int, summary: str):
     supabase.table("summaries").upsert({
         "id": id,
         "summary": summary,
-        "last_updated": datetime.now().isoformat()
+        "last_updated": datetime.now(timezone.utc).isoformat()
     }).execute()
 
 
@@ -87,5 +87,5 @@ def save_order(id: int, items: list[ProductItem] = [] , final_price: Optional[fl
         "id":id , 
         "current_order": serialized , 
         "final_price":final_price , 
-        "last_updated": datetime.now().isoformat()
+        "last_updated": datetime.now(timezone.utc).isoformat()
     }).execute()

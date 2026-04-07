@@ -51,7 +51,7 @@ export const authAPI = {
   login: async (email, password) => {
     const data = await request("POST", "/auth/login", { email, password }, false);
     localStorage.setItem("token", data.access_token);
-    // Fresh session on login
+    // User requested fresh session only on actual re-login
     localStorage.setItem("session_id", crypto.randomUUID());
     return data;
   },
@@ -113,10 +113,11 @@ export const chatAPI = {
   getHistory: () =>
     request("GET", `/chat/history?session_id=${getSessionId()}`),
 
-  resumeChat: (paymentStatus) => 
+  resumeChat: (paymentStatus, userContent = null) => 
     request("POST", "/chat/resume", {
       session_id: getSessionId(),
-      payment_status: paymentStatus
+      payment_status: paymentStatus,
+      user_content: userContent
     }),
 };
 

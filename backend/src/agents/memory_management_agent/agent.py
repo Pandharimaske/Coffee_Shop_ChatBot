@@ -39,6 +39,11 @@ async def memory_agent(state: CoffeeAgentState, config: RunnableConfig) -> Comma
         })
 
         if not intent.has_updates():
+            # --- MEM0 INTEGRATION: Silent Background Update ---
+            if user_id != "anonymous" and state.user_input:
+                from src.memory.mem0_manager import mem0_manager
+                mem0_manager.add_memory(state.user_input, user_id=user_id)
+            # ------------------------------------------------
             return Command(goto="intent_refiner")
 
         # Trigger HITL before applying
@@ -48,17 +53,13 @@ async def memory_agent(state: CoffeeAgentState, config: RunnableConfig) -> Comma
         })
 
         if status == "reject":
-            logger.info("User rejected memory update via HITL.")
+            logger.info("User rejected memory update via HITL. Skipping Supabase and Mem0.")
             return Command(goto="intent_refiner")
 
         # Apply updates
         memory = state.user_memory.model_copy(deep=True)
 
         logger.info(f"--- MEMORY AGENT: APPLYING UPDATES for {user_id} ---")
-        logger.info(f"Current Memory: {memory.model_dump()}")
-        logger.info(f"Intent (Remove): {intent.remove}")
-        logger.info(f"Intent (Add): {intent.add_or_update}")
-
         if intent.add_or_update:
             memory = merge_and_update_memory(intent.add_or_update, memory)
         if intent.remove:
@@ -66,16 +67,18 @@ async def memory_agent(state: CoffeeAgentState, config: RunnableConfig) -> Comma
         if intent.replace:
             memory = replace_in_memory(intent.replace, memory)
 
-        logger.info(f"Updated Memory (Ready to Save): {memory.model_dump()}")
-
-        # Persist to Supabase
+        # Persist to Supabase and Mem0
         if user_id != "anonymous":
             save_user_memory(user_id, memory)
+            
+            # --- MEM0 INTEGRATION: Add to semantic memory (after approval) ---
+            from src.memory.mem0_manager import mem0_manager
+            mem0_manager.add_memory(state.user_input, user_id=user_id)
+            # ------------------------------------------------
         else:
             logger.debug("Skipping Supabase save — no user_id in config")
 
         # Always forward to intent_refiner with updated memory
-        # Router will send to general_agent if the message was memory-only
         return Command(
             update={"user_memory": memory},
             goto="intent_refiner"

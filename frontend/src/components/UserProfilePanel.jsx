@@ -83,10 +83,10 @@ export default function UserProfilePanel({ onClose }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const save = async () => {
+  const save = async (updatedPrefs = prefs) => {
     setSaving(true);
     try {
-      await userAPI.updatePreferences(prefs);
+      await userAPI.updatePreferences(updatedPrefs);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (e) {
@@ -94,6 +94,13 @@ export default function UserProfilePanel({ onClose }) {
     } finally {
       setSaving(false);
     }
+  };
+
+  // Auto-Save when tags are changed
+  const handleTagsChange = (field, newValues) => {
+    const newPrefs = { ...prefs, [field]: newValues };
+    setPrefs(newPrefs);
+    save(newPrefs); // Trigger immediate sync to DB
   };
 
   const avatar = (user?.username || user?.email || "U")[0].toUpperCase();
@@ -165,7 +172,7 @@ export default function UserProfilePanel({ onClose }) {
                     <TagInput
                       field={label.toLowerCase()}
                       values={prefs[field]}
-                      onChange={(v) => setPrefs({ ...prefs, [field]: v })}
+                      onChange={(v) => handleTagsChange(field, v)}
                       color={color}
                     />
                   </div>

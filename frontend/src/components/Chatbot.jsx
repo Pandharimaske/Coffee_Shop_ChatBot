@@ -67,28 +67,57 @@ function InterruptBubble({ payload, onResolve }) {
   }
 
   const isMemory = payload.action === "memory_validation";
+  
+  // Format extraction details for better UX
+  const renderDetails = () => {
+    if (!isMemory || !payload.details) return null;
+    const { add_or_update, remove, replace } = payload.details;
+    
+    const items = [];
+    if (add_or_update) {
+      Object.entries(add_or_update).forEach(([key, val]) => {
+        items.push(<div key={key}>Save <span className="text-white font-bold">{Array.isArray(val) ? val.join(", ") : val}</span> to <span className="opacity-70 italic">{key}</span>?</div>);
+      });
+    }
+    if (remove) {
+      Object.entries(remove).forEach(([key, val]) => {
+        items.push(<div key={key}>Remove <span className="text-white font-bold">{Array.isArray(val) ? val.join(", ") : val}</span> from <span className="opacity-70 italic">{key}</span>?</div>);
+      });
+    }
+    if (replace) {
+      Object.entries(replace).forEach(([key, val]) => {
+        items.push(<div key={key}>Update <span className="opacity-70 italic">{key}</span> to <span className="text-white font-bold">{val}</span>?</div>);
+      });
+    }
+    return <div className="mt-2 space-y-1 text-xs border-l-2 border-[#dfc18b]/30 pl-2 py-1 bg-white/5 rounded-r-md">{items}</div>;
+  };
 
   return (
     <div className="text-sm p-1">
       <p className="mb-2 font-semibold text-[#dfc18b]">
         {isMemory ? "Health & Preference Update" : "Order Confirmation"}
       </p>
-      <p className="mb-4 opacity-90 leading-relaxed text-sm">
+      <div className="mb-4 opacity-90 leading-relaxed text-sm">
         {isMemory 
-          ? "I noticed you mentioned a preference. Would you like me to securely save this to your profile so I remember it for future visits?" 
+          ? (
+            <>
+              I noticed you mentioned a preference. Would you like me to securely save this to your profile?
+              {renderDetails()}
+            </>
+          )
           : `Are you sure you want to finalize your order for ₹${payload.total}?`}
-      </p>
+      </div>
       
       <div className="flex gap-2">
         <button 
           onClick={() => onResolve("approve")}
-          className="flex-1 bg-gradient-to-r from-[#dfc18b] to-[#a37c35] hover:opacity-90 text-[#1a1714] font-bold py-1.5 px-3 rounded-lg transition-transform hover:scale-105"
+          className="flex-1 bg-gradient-to-r from-[#dfc18b] to-[#a37c35] hover:opacity-90 text-[#1a1714] font-bold py-1.5 px-3 rounded-lg transition-transform hover:scale-105 shadow-md flex items-center justify-center gap-1.5"
         >
           {isMemory ? "Save Securely" : "Yes, Checkout"}
         </button>
         <button 
           onClick={() => onResolve("reject")}
-          className="flex-1 bg-white/10 hover:bg-white/20 text-white font-medium py-1.5 px-3 rounded-lg transition-colors border border-white/10"
+          className="flex-1 bg-white/10 hover:bg-white/20 text-white font-medium py-1.5 px-3 rounded-lg transition-colors border border-white/10 flex items-center justify-center"
         >
           {isMemory ? "No, Ignore" : "Wait, Modify"}
         </button>
@@ -260,6 +289,10 @@ const Chatbot = () => {
   };
 
   const handleResolveInterrupt = async (index, payload, status) => {
+    const userLabel = status === "approve" 
+      ? (payload.action === "memory_validation" ? "Yes, please save that." : "Yes, let's checkout.") 
+      : "No, cancel that.";
+
     // 1. Mark message as resolved
     setMessages(prev => {
        const next = [...prev];
@@ -268,9 +301,7 @@ const Chatbot = () => {
        // 2. Add implicit user reply
        next.push({
            role: "user",
-           content: status === "approve" 
-              ? (payload.action === "memory_validation" ? "Yes, please save that." : "Yes, let's checkout.") 
-              : "No, cancel that.",
+           content: userLabel,
            timestamp: new Date()
        });
        return next;
@@ -293,7 +324,7 @@ const Chatbot = () => {
     setIsTyping(true);
     setBotStatus("Processing...");
     try {
-        const data = await chatAPI.resumeChat(status);
+        const data = await chatAPI.resumeChat(status, userLabel);
         setMessages(prev => [...prev, { role: "bot", content: data.response, timestamp: new Date() }]);
     } catch {
         setMessages(prev => [...prev, { role: "bot", content: "⚠️ Failed to process action.", timestamp: new Date() }]);
@@ -306,10 +337,12 @@ const Chatbot = () => {
 
   const handleResumePayment = async (status) => {
     setCheckoutPayload(null);
+    const userLabel = status === 'approve' ? 'Payment authorized.' : 'Payment canceled.';
+
     setIsTyping(true);
     setBotStatus("Confirming order...");
     try {
-      const data = await chatAPI.resumeChat(status);
+      const data = await chatAPI.resumeChat(status, userLabel);
       setMessages((prev) => [...prev, {
         role: "bot",
         content: data.response,

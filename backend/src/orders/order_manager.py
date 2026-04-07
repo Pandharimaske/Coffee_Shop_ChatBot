@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 import logging
 
@@ -48,7 +48,7 @@ def save_order(user_email: str, items: List[ProductItem], total: float) -> None:
             "items": [i.model_dump() for i in items],
             "total": total,
             "status": "pending",
-            "updated_at": datetime.now().isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
         }
         supabase.table(TABLE).insert(data).execute()
         logger.info(f"Order saved for {user_email} — {len(items)} items, ₹{total}")
@@ -67,7 +67,7 @@ def confirm_order(user_email: str, items: List[ProductItem], total: float) -> Op
             "items": [i.model_dump() for i in items],
             "total": total,
             "status": "confirmed",
-            "updated_at": datetime.now().isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
         }
         res = supabase.table(TABLE).insert(data).execute()
         order_id = res.data[0]["id"] if res.data else None
