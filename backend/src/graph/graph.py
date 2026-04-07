@@ -37,16 +37,17 @@ def _get_checkpointer():
         from langgraph.checkpoint.postgres import PostgresSaver
         
         # Transaction Pooler requires prepare_threshold=0
-        # tcp_user_timeout helps avoid long hangs on network issues
-        conninfo = f"{db_uri} sslmode=require tcp_user_timeout=10000"
-        
         pool = ConnectionPool(
-            conninfo=conninfo,
+            conninfo=db_uri,
             max_size=10,
             open=True,
             kwargs={
                 "autocommit": True, 
-                "prepare_threshold": 0
+                "prepare_threshold": 0,
+                "connparams": {
+                    "sslmode": "require",
+                    "tcp_user_timeout": 10000
+                }
             }
         )
         saver = PostgresSaver(pool)
