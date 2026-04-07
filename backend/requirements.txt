@@ -419,6 +419,7 @@ email-validator==2.3.0 \
     --hash=sha256:80f13f623413e6b197ae73bb10bf4eb0908faf509ad8362c5edeb0be7fd450b4 \
     --hash=sha256:9fc05c37f2f6cf439ff414f8fc46d917929974a82244c20eb10231ba60c54426
     # via
+    #   backend
     #   fastapi
     #   pydantic
 fastapi==0.128.4 \
@@ -735,6 +736,10 @@ grpcio==1.80.0 \
     --hash=sha256:f14b618fc30de822681ee986cfdcc2d9327229dc4c98aed16896761cacd468b9 \
     --hash=sha256:f49eddcac43c3bf350c0385366a58f36bed8cc2c0ec35ef7b74b49e56552c0c2
     # via qdrant-client
+gunicorn==25.3.0 \
+    --hash=sha256:cacea387dab08cd6776501621c295a904fe8e3b7aae9a1a3cbb26f4e7ed54660 \
+    --hash=sha256:f74e1b2f9f76f6cd1ca01198968bd2dd65830edc24b6e8e4d78de8320e2fe889
+    # via backend
 h11==0.16.0 \
     --hash=sha256:4e35b956cf45792e4caa5885e69fba00bdbc6ffafbfa020300e549b208ee5ff1 \
     --hash=sha256:63cf8bbe7522de3bf65932fda1d9c2772064ffb3dae62d55932da54b31cb6c86
@@ -812,6 +817,7 @@ httpx==0.28.1 \
     --hash=sha256:75e98c5f16b0f35b567856f597f06ff2270a374470a5c2392242528e3e3e42fc \
     --hash=sha256:d909fcccc110f8c7faf814ca82a9a4d816bc5a6dbfea25d6591d6985b8ba59ad
     # via
+    #   backend
     #   fastapi
     #   fastapi-cloud-cli
     #   groq
@@ -1613,6 +1619,7 @@ packaging==24.2 \
     --hash=sha256:c228a6dc5e932d346bc5739379109d49e8853dd8223571c7c5b55260edc0b97f
     # via
     #   deprecation
+    #   gunicorn
     #   huggingface-hub
     #   langchain-core
     #   langsmith
@@ -2115,6 +2122,7 @@ python-dotenv==1.2.1 \
     --hash=sha256:42667e897e16ab0d66954af0e60a9caa94f0fd4ecf3aaf6d2d260eec1aa36ad6 \
     --hash=sha256:b81ee9561e9ca4004139c6cbba3a238c32b03e4894671e181b671e8cb8425d61
     # via
+    #   backend
     #   pydantic-settings
     #   uvicorn
 python-multipart==0.0.22 \
@@ -2971,6 +2979,7 @@ uvicorn==0.40.0 \
     --hash=sha256:839676675e87e73694518b5574fd0f24c9d97b46bea16df7b8c05ea1a51071ea \
     --hash=sha256:c6c8f55bc8bf13eb6fa9ff87ad62308bbbc33d0b67f84293151efe87e0d5f2ee
     # via
+    #   backend
     #   fastapi
     #   fastapi-cli
     #   fastapi-cloud-cli
