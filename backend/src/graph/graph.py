@@ -36,25 +36,26 @@ def _get_checkpointer():
         from psycopg_pool import ConnectionPool
         from langgraph.checkpoint.postgres import PostgresSaver
         
+        # Supabase Transaction Pooler (Port 6543) works best with IPv4 URIs
         # Transaction Pooler requires prepare_threshold=0
+        # Adding sslmode and timeout as query parameters for better URI compatibility
+        separator = "&" if "?" in db_uri else "?"
+        full_uri = f"{db_uri}{separator}sslmode=require&tcp_user_timeout=10000"
+        
         pool = ConnectionPool(
-            conninfo=db_uri,
+            conninfo=full_uri,
             max_size=10,
             open=True,
             kwargs={
                 "autocommit": True, 
-                "prepare_threshold": 0,
-                "connparams": {
-                    "sslmode": "require",
-                    "tcp_user_timeout": 10000
-                }
+                "prepare_threshold": 0
             }
         )
         saver = PostgresSaver(pool)
         saver.setup()
         _checkpointer = saver
         import logging
-        logging.getLogger(__name__).info("Postgres checkpointer successfully initialized via IPv4/Pooler")
+        logging.getLogger(__name__).info("Postgres checkpointer successfully initialized via IPv4 Pooler URI")
     except Exception as e:
         import logging
         logging.getLogger(__name__).warning(f"Postgres checkpointer failed, falling back to MemorySaver: {e}")
