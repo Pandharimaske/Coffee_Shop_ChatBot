@@ -35,15 +35,25 @@ def _get_checkpointer():
     try:
         from psycopg_pool import ConnectionPool
         from langgraph.checkpoint.postgres import PostgresSaver
+        
+        # Transaction Pooler requires prepare_threshold=0
+        # tcp_user_timeout helps avoid long hangs on network issues
+        conninfo = f"{db_uri} sslmode=require tcp_user_timeout=10000"
+        
         pool = ConnectionPool(
-            conninfo=db_uri,
-            max_size=20,
+            conninfo=conninfo,
+            max_size=10,
             open=True,
-            kwargs={"autocommit": True, "prepare_threshold": 0}
+            kwargs={
+                "autocommit": True, 
+                "prepare_threshold": 0
+            }
         )
         saver = PostgresSaver(pool)
         saver.setup()
         _checkpointer = saver
+        import logging
+        logging.getLogger(__name__).info("Postgres checkpointer successfully initialized via IPv4/Pooler")
     except Exception as e:
         import logging
         logging.getLogger(__name__).warning(f"Postgres checkpointer failed, falling back to MemorySaver: {e}")
