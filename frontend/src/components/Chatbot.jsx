@@ -175,12 +175,50 @@ const Chatbot = () => {
     chatAPI.getHistory()
       .then((history) => {
         if (history.length > 0) {
-          setMessages(history.map((m) => ({
-            role: m.role === "user" ? "user" : "bot",
-            content: m.content,
-            timestamp: new Date(),
-          })));
+          setMessages(history.map((m, index) => {
+            const isUser = m.role === "user";
+            let type = m.msg_type || "text";
+            let content = m.content;
+
+            if (type === "interrupt") {
+              try {
+                // Parse the JSON payload for bubbles
+                const payload = JSON.parse(m.content);
+                
+                // CRITICAL: Check if this bubble was resolved in subsequent messages
+                const nextMessages = history.slice(index + 1);
+                const resolution = nextMessages.find(next => 
+                  next.role === "user" && (
+                    next.content.toLowerCase().includes("yes") || 
+                    next.content.toLowerCase().includes("no") || 
+                    next.content.toLowerCase().includes("cancel")
+                  )
+                );
+                
+                if (resolution) {
+                  payload.resolved = true;
+                  payload.resolvedStatus = (
+                    resolution.content.toLowerCase().includes("yes") || 
+                    resolution.content.toLowerCase().includes("approve")
+                  ) ? "approve" : "reject";
+                }
+                
+                content = payload;
+              } catch (e) {
+                console.warn("Failed to parse historical interrupt:", e);
+                type = "text"; // Fallback to text if parsing fails
+              }
+            }
+
+            return {
+              role: isUser ? "user" : "bot",
+              type,
+              content,
+              timestamp: new Date(),
+            };
+          }));
         } else {
+          // Absolute fallback for brand new sessions where history hasn't been saved yet
           setMessages([{
             role: "bot",
             content: `Hey ${user.username || user.email.split("@")[0]}! Welcome to Merry's Way ☕ What can I get you today?`,
@@ -188,7 +226,8 @@ const Chatbot = () => {
           }]);
         }
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error("History load error:", err);
         setMessages([{
           role: "bot",
           content: "Welcome to Merry's Way ☕ What can I get you today?",

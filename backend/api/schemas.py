@@ -68,6 +68,7 @@ class ResumeRequest(BaseModel):
 class MessageHistoryResponse(BaseModel):
     role: str   # 'user' | 'assistant'
     content: str
+    msg_type: Optional[str] = "text"   # 'text' | 'interrupt'
 
 
 # ── Orders ────────────────────────────────────────────────────────────────────

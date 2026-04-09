@@ -22,13 +22,23 @@ _graph = build_coffee_shop_graph()
 async def get_history(session_id: str, current_user: CurrentUser):
     """Load message history for a session — called on page load/refresh."""
     messages = load_messages(session_id)
-    return [
-        MessageHistoryResponse(
-            role="user" if m.__class__.__name__ == "HumanMessage" else "assistant",
-            content=m.content,
-        )
-        for m in messages
-    ]
+    result = []
+    for m in messages:
+        role = "user" if m.__class__.__name__ == "HumanMessage" else "assistant"
+        content = m.content
+        msg_type = "text"
+        
+        if role == "assistant" and content.startswith("[Approval Required]"):
+            msg_type = "interrupt"
+            # Extract JSON payload only if it's there
+            content = content.replace("[Approval Required] ", "").strip()
+                
+        result.append(MessageHistoryResponse(
+            role=role,
+            content=content,
+            msg_type=msg_type
+        ))
+    return result
 
 
 @router.post("", response_model=ChatResponse)
@@ -126,6 +136,21 @@ async def stream_chat(body: ChatRequest, current_user: CurrentUser):
         order, final_price = [], 0.0
 
     messages = load_messages(session_id)
+    
+    # ATOMIC TURNOUT FOR NEW SESSIONS
+    if not messages:
+        welcome_msg = f"Hey {current_user.username or user_email.split('@')[0]}! Welcome to Merry's Way ☕ What can I get you today?"
+        # Save Welcome + Initial User Input in one go to preserve history flow
+        append_messages(session_id, user_email, [
+            {"role": "bot", "content": welcome_msg},
+            {"role": "user", "content": body.user_input}
+        ])
+    else:
+        # Just save the user message normally
+        append_message(session_id, user_email, "user", body.user_input)
+    
+    # Reload for graph context
+    messages = load_messages(session_id)
 
     state = CoffeeAgentState(
         user_input=body.user_input,
@@ -175,10 +200,9 @@ async def stream_chat(body: ChatRequest, current_user: CurrentUser):
             current_state = await _graph.aget_state(config)
             if current_state.tasks and current_state.tasks[0].interrupts:
                 payload = current_state.tasks[0].interrupts[0].value
-                # SAVE BUBBLE TO HISTORY SO IT SURVIVES REFRESH
-                # Using a generic label for the bubble or details if available
-                details = payload.get("details", {}) if isinstance(payload, dict) else {}
-                bubble_text = f"[Approval Required] {details}" if details else "Please approve the action above."
+                # SAVE STRUCTURED BUBBLE TO HISTORY
+                # We save with a prefix so /history can identify it as an interrupt type
+                bubble_text = f"[Approval Required] {json.dumps(payload)}"
                 append_message(session_id, user_email, "bot", bubble_text)
                 yield f"data: {json.dumps({'type': 'interrupt', 'payload': payload})}\n\n"
                 return  # Skip saving to history and returning text since we are paused

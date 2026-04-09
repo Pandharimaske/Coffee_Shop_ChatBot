@@ -87,9 +87,14 @@ async def details_management_agent(state: CoffeeAgentState) -> Command:
 
     except Exception as e:
         logger.error(f"Details agent failed: {e}", exc_info=True)
+        
+        # Check for specific LLM API errors
+        from src.utils.util import get_llm_error_message
+        msg = get_llm_error_message(e) or "I'm having trouble retrieving that information right now. Please try again."
+        
         return Command(
             update={
-                "response_message": "I'm having trouble retrieving that information right now. Please try again.",
+                "response_message": msg,
             },
             goto=END
         )

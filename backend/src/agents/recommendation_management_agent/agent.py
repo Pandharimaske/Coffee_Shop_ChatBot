@@ -88,8 +88,12 @@ async def recommendation_management_agent(state: CoffeeAgentState) -> Command:
 
     except Exception as e:
         logger.error(f"recommendation_management_agent failed: {e}", exc_info=True)
-        msg = "I'd love to recommend something! Could you tell me what kind of mood you're in — something sweet, strong, or a snack?"
+        
+        # Check for specific LLM API errors
+        from src.utils.util import get_llm_error_message
+        msg = get_llm_error_message(e) or "I'd love to recommend something! Could you tell me what kind of mood you're in — something sweet, strong, or a snack?"
+        
         return Command(
             update={"response_message": msg, "messages": [AIMessage(content=msg)]},
-            goto=END,
+            goto=END
         )

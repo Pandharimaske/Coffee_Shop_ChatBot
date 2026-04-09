@@ -48,7 +48,11 @@ async def general_agent(state: CoffeeAgentState) -> Command:
         )
     except Exception as e:
         logger.error(f"general_agent failed: {e}", exc_info=True)
-        msg = "Hey there! Sorry, I had a small hiccup. How can I help you today?"
+        
+        # Check for specific LLM API errors
+        from src.utils.util import get_llm_error_message
+        msg = get_llm_error_message(e) or "Hey there! Sorry, I had a small hiccup. How can I help you today?"
+        
         return Command(
             update={"response_message": msg, "messages": [AIMessage(content=msg)]},
             goto=END

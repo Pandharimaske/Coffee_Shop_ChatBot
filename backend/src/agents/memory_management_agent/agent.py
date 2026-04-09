@@ -27,16 +27,26 @@ async def memory_agent(state: CoffeeAgentState, config: RunnableConfig) -> Comma
 
     - Extracts memory preferences from user input
     - Saves to Supabase if anything found
-    - Always routes to intent_refiner — router decides if general_agent should acknowledge
+    - Always routes to router — router decides which action agent to use
     """
     user_id: str = config.get("configurable", {}).get("user_id", "anonymous")
 
     try:
+        # Format recent messages for context
+        recent_messages = state.messages[-6:] if state.messages else []
+        formatted_messages = "\n".join([
+            f"{getattr(m, 'type', 'unknown').upper()}: {m.content}"
+            for m in recent_messages
+        ]) or "(no prior messages)"
+
         intent: MemoryIntent = await _extractor.ainvoke({
             "user_input": state.user_input,
             "user_memory": state.user_memory.model_dump(),
-            "chat_summary": state.chat_summary,
+            "messages": formatted_messages,
         })
+
+        if intent.reasoning:
+            logger.info(f"Memory Agent Reasoning: {intent.reasoning}")
 
         if not intent.has_updates():
             # --- MEM0 INTEGRATION: Silent Background Update ---
@@ -44,7 +54,7 @@ async def memory_agent(state: CoffeeAgentState, config: RunnableConfig) -> Comma
                 from src.memory.mem0_manager import mem0_manager
                 mem0_manager.add_memory(state.user_input, user_id=user_id)
             # ------------------------------------------------
-            return Command(goto="intent_refiner")
+            return Command(goto="router")
 
         # Trigger HITL before applying
         status = interrupt({
@@ -54,7 +64,7 @@ async def memory_agent(state: CoffeeAgentState, config: RunnableConfig) -> Comma
 
         if status == "reject":
             logger.info("User rejected memory update via HITL. Skipping Supabase and Mem0.")
-            return Command(goto="intent_refiner")
+            return Command(goto="router")
 
         # Apply updates
         memory = state.user_memory.model_copy(deep=True)
@@ -81,7 +91,7 @@ async def memory_agent(state: CoffeeAgentState, config: RunnableConfig) -> Comma
         # Always forward to intent_refiner with updated memory
         return Command(
             update={"user_memory": memory},
-            goto="intent_refiner"
+            goto="router"
         )
 
     except GraphInterrupt:
@@ -89,4 +99,13 @@ async def memory_agent(state: CoffeeAgentState, config: RunnableConfig) -> Comma
         raise
     except Exception as e:
         logger.error(f"memory_agent failed: {e}", exc_info=True)
-        return Command(goto="intent_refiner")
+        
+        # Check for specific LLM API errors
+        from src.utils.util import get_llm_error_message
+        if api_msg := get_llm_error_message(e):
+            return Command(
+                update={"response_message": api_msg},
+                goto=END
+            )
+
+        return Command(goto="router")

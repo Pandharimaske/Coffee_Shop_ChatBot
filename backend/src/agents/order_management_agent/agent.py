@@ -16,25 +16,32 @@ from src.agents.order_management_agent.prompt import (
     parse_new_order_prompt,
     parse_order_update_prompt,
     detect_order_action_prompt,
+    order_responder_prompt,
 )
 from langchain_core.runnables import RunnableConfig
 from src.rag.retriever import get_product_by_name
 from src.orders import save_order, confirm_order, cancel_order
+from src.utils.email_util import send_order_receipt
 
 logger = logging.getLogger(__name__)
 
 _action_llm    = llm.with_structured_output(ActionDecision)
 _new_order_llm = llm.with_structured_output(OrderInput)
 _update_llm    = llm.with_structured_output(OrderUpdateState)
+_responder     = order_responder_prompt | llm
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _lookup_price(name: str) -> float:
+def _lookup_product(name: str) -> dict:
     result = get_product_by_name(name)
     if result.get("found"):
-        return float(result.get("price") or result.get("metadata", {}).get("price", 0.0))
-    return 0.0
+        return {
+            "name": result.get("name"),
+            "price": float(result.get("price") or result.get("metadata", {}).get("price", 0.0)),
+            "image_url": result.get("image_url")
+        }
+    return {"found": False}
 
 
 def _format_order_summary(order: List[ProductItem], final_price: float) -> str:
@@ -51,6 +58,34 @@ def _mock_receipt(order: List[ProductItem], final_price: float, order_id: str = 
         f"You can view it anytime under **Order History** on the Orders page."
     )
     return receipt
+
+
+async def _generate_dynamic_response(
+    action_type: str,
+    items_impacted: List[str],
+    current_order: List[str],
+    total_price: float,
+    unavailable_items: List[str],
+    status_message: str,
+    user_input: str,
+    messages: List
+) -> str:
+    """Invokes the responder LLM to get a natural response."""
+    try:
+        response = await _responder.ainvoke({
+            "action_type": action_type,
+            "items_impacted": items_impacted,
+            "current_order": current_order,
+            "total_price": total_price,
+            "unavailable_items": unavailable_items,
+            "status_message": status_message,
+            "user_input": user_input,
+            "messages": messages[-6:] if messages else []
+        })
+        return response.content
+    except Exception as e:
+        logger.error(f"Dynamic response generation failed: {e}")
+        return status_message # Fallback to hardcoded status
 
 
 # ── Main agent ────────────────────────────────────────────────────────────────
@@ -88,7 +123,16 @@ async def order_management_agent(state: CoffeeAgentState, config: RunnableConfig
         # ── CONFIRM ───────────────────────────────────────────────────────────
         if action == OrderAction.CONFIRM:
             if not existing_order:
-                msg = "You don't have anything in your order yet. Want to start one?"
+                msg = await _generate_dynamic_response(
+                    action_type="confirm",
+                    items_impacted=[],
+                    current_order=[],
+                    total_price=0.0,
+                    unavailable_items=[],
+                    status_message="You don't have anything in your order yet. Want to start one?",
+                    user_input=user_input,
+                    messages=messages
+                )
                 return Command(update={"response_message": msg, "messages": [AIMessage(content=msg)]}, goto=END)
 
             # Trigger HITL Order Confirmation & Payment
@@ -98,13 +142,36 @@ async def order_management_agent(state: CoffeeAgentState, config: RunnableConfig
                 order_id = None
                 if user_id != "anonymous":
                     order_id = confirm_order(user_id, existing_order, state.final_price)
+                    # Trigger beautiful email receipt
+                    import asyncio
+                    asyncio.create_task(send_order_receipt(user_id, existing_order, state.final_price, order_id))
+                
                 receipt = _mock_receipt(existing_order, state.final_price, order_id)
+                msg = await _generate_dynamic_response(
+                    action_type="confirm",
+                    items_impacted=[i.name for i in existing_order],
+                    current_order=[f"{i.name} x{i.quantity}" for i in existing_order],
+                    total_price=state.final_price,
+                    unavailable_items=[],
+                    status_message=receipt,
+                    user_input=user_input,
+                    messages=messages
+                )
                 return Command(
-                    update={"response_message": receipt, "messages": [AIMessage(content=receipt)], "order": [], "final_price": 0.0},
+                    update={"response_message": msg, "messages": [AIMessage(content=msg)], "order": [], "final_price": 0.0},
                     goto=END
                 )
             else:
-                msg = "Checkout was cancelled. Your order is still saved in your cart."
+                msg = await _generate_dynamic_response(
+                    action_type="confirm_cancel",
+                    items_impacted=[],
+                    current_order=[f"{i.name} x{i.quantity}" for i in existing_order],
+                    total_price=state.final_price,
+                    unavailable_items=[],
+                    status_message="Checkout was cancelled. Your order is still saved in your cart.",
+                    user_input=user_input,
+                    messages=messages
+                )
                 return Command(
                     update={"response_message": msg, "messages": [AIMessage(content=msg)]},
                     goto=END
@@ -112,9 +179,19 @@ async def order_management_agent(state: CoffeeAgentState, config: RunnableConfig
 
         # ── CANCEL ────────────────────────────────────────────────────────────
         elif action == OrderAction.CANCEL:
-            msg = "Your order has been cancelled. Let me know if you'd like to start a new one!"
             if user_id != "anonymous":
                 cancel_order(user_id)
+            
+            msg = await _generate_dynamic_response(
+                action_type="cancel",
+                items_impacted=[i.name for i in existing_order],
+                current_order=[],
+                total_price=0.0,
+                unavailable_items=[],
+                status_message="Your order has been cancelled. Let me know if you'd like to start a new one!",
+                user_input=user_input,
+                messages=messages
+            )
             return Command(
                 update={"response_message": msg, "messages": [AIMessage(content=msg)], "order": [], "final_price": 0.0},
                 goto=END
@@ -129,10 +206,17 @@ async def order_management_agent(state: CoffeeAgentState, config: RunnableConfig
 
             new_order, total, unavailable = [], 0.0, []
             for item in parsed.items:
-                price = _lookup_price(item.name)
-                if price > 0:
+                product = _lookup_product(item.name)
+                if product.get("name"):
+                    price = product["price"]
                     line_total = round(price * item.quantity, 2)
-                    new_order.append(ProductItem(name=item.name, quantity=item.quantity, per_unit_price=price, total_price=line_total))
+                    new_order.append(ProductItem(
+                        name=product["name"], 
+                        quantity=item.quantity, 
+                        per_unit_price=price, 
+                        total_price=line_total,
+                        image_url=product.get("image_url")
+                    ))
                     total += line_total
                 else:
                     unavailable.append(item.name)
@@ -152,6 +236,17 @@ async def order_management_agent(state: CoffeeAgentState, config: RunnableConfig
                     msg = f"Sorry, we don't serve {', '.join(unavailable)}. However, we highly recommend trying our {', '.join(recommendations)}! Would you like me to add that to your order?"
                 else:
                     msg = f"Sorry, I couldn't find any of those items on our menu: {', '.join(unavailable)}."
+                
+                msg = await _generate_dynamic_response(
+                    action_type="create_error",
+                    items_impacted=[],
+                    current_order=[],
+                    total_price=0.0,
+                    unavailable_items=unavailable,
+                    status_message=msg,
+                    user_input=user_input,
+                    messages=messages
+                )
                 return Command(update={"response_message": msg, "messages": [AIMessage(content=msg)]}, goto=END)
 
             summary = _format_order_summary(new_order, total)
@@ -160,8 +255,19 @@ async def order_management_agent(state: CoffeeAgentState, config: RunnableConfig
             if user_id != "anonymous":
                 save_order(user_id, new_order, total)
 
+            msg = await _generate_dynamic_response(
+                action_type="create",
+                items_impacted=[i.name for i in new_order],
+                current_order=[f"{i.name} x{i.quantity}" for i in new_order],
+                total_price=total,
+                unavailable_items=unavailable,
+                status_message=summary,
+                user_input=user_input,
+                messages=messages
+            )
+
             return Command(
-                update={"order": new_order, "final_price": total, "response_message": summary, "messages": [AIMessage(content=summary)]},
+                update={"order": new_order, "final_price": total, "response_message": msg, "messages": [AIMessage(content=msg)]},
                 goto=END
             )
 
@@ -177,15 +283,18 @@ async def order_management_agent(state: CoffeeAgentState, config: RunnableConfig
 
             for update in parsed.updates:
                 key = update.name.lower()
-                price = _lookup_price(update.name)
+                product = _lookup_product(update.name)
+                price = product.get("price", 0.0)
+                image_url = product.get("image_url")
 
                 if update.set_quantity is not None:
                     if update.set_quantity <= 0:
                         order_dict.pop(key, None)
-                    else:
+                    elif product.get("name"):
                         order_dict[key] = ProductItem(
-                            name=update.name, quantity=update.set_quantity,
-                            per_unit_price=price, total_price=round(price * update.set_quantity, 2)
+                            name=product["name"], quantity=update.set_quantity,
+                            per_unit_price=price, total_price=round(price * update.set_quantity, 2),
+                            image_url=image_url
                         )
                 elif update.delta_quantity is not None:
                     if key in order_dict:
@@ -195,21 +304,33 @@ async def order_management_agent(state: CoffeeAgentState, config: RunnableConfig
                         else:
                             order_dict[key] = ProductItem(
                                 name=order_dict[key].name, quantity=new_qty,
-                                per_unit_price=price, total_price=round(price * new_qty, 2)
+                                per_unit_price=price, total_price=round(price * new_qty, 2),
+                                image_url=order_dict[key].image_url or image_url
                             )
-                    elif update.delta_quantity > 0:
+                    elif update.delta_quantity > 0 and product.get("name"):
                         order_dict[key] = ProductItem(
-                            name=update.name, quantity=update.delta_quantity,
-                            per_unit_price=price, total_price=round(price * update.delta_quantity, 2)
+                            name=product["name"], quantity=update.delta_quantity,
+                            per_unit_price=price, total_price=round(price * update.delta_quantity, 2),
+                            image_url=image_url
                         )
 
             updated_order = list(order_dict.values())
             total = round(sum(i.total_price or 0 for i in updated_order), 2)
 
             if not updated_order:
-                msg = "Your order is now empty. Let me know if you'd like to order something!"
                 if user_id != "anonymous":
                     cancel_order(user_id)
+                
+                msg = await _generate_dynamic_response(
+                    action_type="update_empty",
+                    items_impacted=[],
+                    current_order=[],
+                    total_price=0.0,
+                    unavailable_items=[],
+                    status_message="Your order is now empty. Let me know if you'd like to order something!",
+                    user_input=user_input,
+                    messages=messages
+                )
                 return Command(
                     update={"order": [], "final_price": 0.0, "response_message": msg, "messages": [AIMessage(content=msg)]},
                     goto=END
@@ -219,8 +340,19 @@ async def order_management_agent(state: CoffeeAgentState, config: RunnableConfig
             if user_id != "anonymous":
                 save_order(user_id, updated_order, total)
 
+            msg = await _generate_dynamic_response(
+                action_type="update",
+                items_impacted=[f"{u.name} (set to {u.set_quantity if u.set_quantity is not None else 'adjusted by ' + str(u.delta_quantity)})" for u in parsed.updates],
+                current_order=[f"{i.name} x{i.quantity}" for i in updated_order],
+                total_price=total,
+                unavailable_items=[],
+                status_message=summary,
+                user_input=user_input,
+                messages=messages
+            )
+
             return Command(
-                update={"order": updated_order, "final_price": total, "response_message": summary, "messages": [AIMessage(content=summary)]},
+                update={"order": updated_order, "final_price": total, "response_message": msg, "messages": [AIMessage(content=msg)]},
                 goto=END
             )
 
@@ -229,5 +361,9 @@ async def order_management_agent(state: CoffeeAgentState, config: RunnableConfig
         raise
     except Exception as e:
         logger.error(f"order_management_agent failed: {e}", exc_info=True)
-        msg = "Sorry, I ran into an issue processing your order. Please try again."
+        
+        # Check for specific LLM API errors
+        from src.utils.util import get_llm_error_message
+        msg = get_llm_error_message(e) or "Sorry, I ran into an issue processing your order. Please try again."
+        
         return Command(update={"response_message": msg, "messages": [AIMessage(content=msg)]}, goto=END)

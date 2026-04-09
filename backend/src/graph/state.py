@@ -10,6 +10,7 @@ class ProductItem(BaseModel):
     quantity: int
     per_unit_price: Optional[float] = None
     total_price: Optional[float] = None
+    image_url: Optional[str] = None
 
 
 class CoffeeAgentState(BaseModel):

@@ -335,15 +335,53 @@ def get_product_by_name(
         if results:
             r = results[0]
             meta = r.get("metadata", {})
+            
+            # Fetch additional assets from Supabase if possible
+            image_url = meta.get("image_url")
+            if not image_url:
+                try:
+                    from src.memory.supabase_client import supabase_admin as supabase
+                    res = supabase.table("coffee_shop_products").select("image_url").eq("name", r.get("name")).execute()
+                    if res.data:
+                        image_url = res.data[0].get("image_url")
+                except Exception as e:
+                    logger.warning(f"Could not fetch image_url from Supabase for {r.get('name')}: {e}")
+
             logger.debug(f"Exact match found for '{name}'")
-            return {"found": True, "name": r.get("name"), "price": r.get("price"), "score": r.get("score"), "metadata": meta}
+            return {
+                "found": True, 
+                "name": r.get("name"), 
+                "price": r.get("price"), 
+                "score": r.get("score"), 
+                "metadata": meta,
+                "image_url": image_url
+            }
 
         # Step 2: Fallback to semantic search
         logger.debug(f"No exact match for '{name}', falling back to semantic search")
         fallback = search_products(name, top_k=1, index_name=index_name)
         if fallback:
             top = fallback[0]
-            return {"found": True, "name": top.get("name"), "price": top.get("price"), "score": top.get("score"), "metadata": top.get("metadata", {})}
+            
+            # Fetch additional assets from Supabase if possible
+            image_url = top.get("metadata", {}).get("image_url")
+            if not image_url:
+                try:
+                    from src.memory.supabase_client import supabase_admin as supabase
+                    res = supabase.table("coffee_shop_products").select("image_url").eq("name", top.get("name")).execute()
+                    if res.data:
+                        image_url = res.data[0].get("image_url")
+                except Exception as e:
+                    logger.warning(f"Could not fetch image_url from Supabase for {top.get('name')}: {e}")
+
+            return {
+                "found": True, 
+                "name": top.get("name"), 
+                "price": top.get("price"), 
+                "score": top.get("score"), 
+                "metadata": top.get("metadata", {}),
+                "image_url": image_url
+            }
 
         return {"found": False, "query": name}
 

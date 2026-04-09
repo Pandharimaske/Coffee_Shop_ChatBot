@@ -76,6 +76,13 @@ class Settings(BaseSettings):
     # ── External ──────────────────────────────────────────────────────────────
     telegram_token: str = ""
 
+    # ── Email (SMTP) ──────────────────────────────────────────────────────────
+    smtp_host: str = "smtp.gmail.com"
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from_email: str = "Coffee Shop <noreply@coffeeshop.com>"
+
     # ── Helpers ───────────────────────────────────────────────────────────────
 
     def is_production(self) -> bool:
@@ -143,6 +150,12 @@ class Config:
 
     SUPABASE_URL = settings.supabase_url
     SUPABASE_KEY = settings.supabase_key
+
+    SMTP_HOST = settings.smtp_host
+    SMTP_PORT = settings.smtp_port
+    SMTP_USER = settings.smtp_user
+    SMTP_PASSWORD = settings.smtp_password
+    SMTP_FROM_EMAIL = settings.smtp_from_email
 
     HEALTH_CHECK_INTERVAL_SECONDS = 300
     CONNECTION_POOL_SIZE = 10

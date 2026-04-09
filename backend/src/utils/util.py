@@ -29,6 +29,46 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
+# --- LLM Error Handling ---
+try:
+    import openai
+except ImportError:
+    openai = None
+
+try:
+    import groq
+except ImportError:
+    groq = None
+
+def get_llm_error_message(e: Exception) -> Optional[str]:
+    """Classifies an LLM exception and returns a user-friendly error message if applicable."""
+    error_str = str(e).lower()
+    
+    # Check for Rate Limits
+    if "rate limit" in error_str or (openai and isinstance(e, openai.RateLimitError)) or (groq and isinstance(e, groq.RateLimitError)):
+        return "🚨 LLM Rate Limit: Too many requests. Please wait a moment before trying again."
+    
+    # Check for Token/Context Limits
+    if "context_length_exceeded" in error_str or "maximum context length" in error_str:
+        return "🚨 LLM Token Limit: The conversation is too long for the current model. Please start a new chat."
+    
+    # Check for Authentication Issues
+    if "authentication" in error_str or (openai and isinstance(e, openai.AuthenticationError)):
+        return "🚨 LLM Auth Error: Invalid API key configuration. Please check your environment variables."
+    
+    # Check for Connection/Timeout
+    if "connection" in error_str or "timeout" in error_str or (openai and isinstance(e, openai.APIConnectionError)):
+        return "🚨 LLM Connection Error: Unable to reach the AI provider. Please check your internet or try again later."
+    
+    # Check for generic API errors that shouldn't be hidden
+    if openai and isinstance(e, openai.OpenAIError):
+        return f"🚨 LLM Provider Error (OpenAI): {str(e)}"
+    
+    if groq and isinstance(e, groq.GroqError):
+        return f"🚨 LLM Provider Error (Groq): {str(e)}"
+
+    return None
+
 
 # ============================================================
 # Connection Health Check

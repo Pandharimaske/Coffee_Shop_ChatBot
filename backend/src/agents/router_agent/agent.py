@@ -39,10 +39,17 @@ async def router_agent(state: CoffeeAgentState) -> Command:
             goto=result['target_agent']
         )
 
-    except Exception:
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"router_agent failed: {e}", exc_info=True)
+        
+        # Check for specific LLM API errors
+        from src.utils.util import get_llm_error_message
+        msg = get_llm_error_message(e) or "Sorry, I'm having trouble understanding your request right now. Could you please try again?"
+        
         return Command(
             update={
-                "response_message": "Sorry, I'm having trouble understanding your request right now. Could you please try again?"
+                "response_message": msg
             },
             goto=END,
         )
