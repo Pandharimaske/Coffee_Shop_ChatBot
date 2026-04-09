@@ -46,6 +46,22 @@ class SupabaseAuthProvider(AuthProvider):
             )
             if not res.user:
                 raise ValueError("Registration failed — no user returned. The email may already be in use.")
+            
+            # Create a corresponding entry in coffee_shop_profiles
+            # We use supabase_admin to bypass RLS during registration
+            from src.memory.supabase_client import supabase_admin
+            try:
+                await _run(
+                    supabase_admin.table("coffee_shop_profiles").insert,
+                    {"user_email": email.lower().strip(), "name": username},
+                    label="Create user profile"
+                )
+                logger.info(f"Created profile for {email}")
+            except Exception as e:
+                logger.error(f"Failed to create profile for {email}: {e}")
+                # We don't raise here because the auth user was already created.
+                # The user can still log in, though some features might be limited until the profile is fixed.
+
             return _parse_user(res.user)
         except ValueError:
             raise
