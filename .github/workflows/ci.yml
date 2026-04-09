@@ -67,7 +67,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Trigger Render Backend Deploy
-        if: ${{ secrets.RENDER_BACKEND_HOOK_URL }}
+        env:
+          RENDER_HOOK: ${{ secrets.RENDER_BACKEND_HOOK_URL }}
+        if: env.RENDER_HOOK != ''
         run: |
           curl -X POST "${{ secrets.RENDER_BACKEND_HOOK_URL }}"
           echo "🚀 Render deploy hook triggered successfully!"
