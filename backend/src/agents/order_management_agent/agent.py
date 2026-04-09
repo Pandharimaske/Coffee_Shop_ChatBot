@@ -163,7 +163,7 @@ async def order_management_agent(state: CoffeeAgentState, config: RunnableConfig
                 )
             else:
                 msg = await _generate_dynamic_response(
-                    action_type="confirm_cancel",
+                    action_type="checkout_cancelled",
                     items_impacted=[],
                     current_order=[f"{i.name} x{i.quantity}" for i in existing_order],
                     total_price=state.final_price,

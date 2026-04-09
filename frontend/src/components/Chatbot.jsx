@@ -190,6 +190,8 @@ const Chatbot = () => {
                 const resolution = nextMessages.find(next => 
                   next.role === "user" && (
                     next.content.toLowerCase().includes("yes") || 
+                    next.content.toLowerCase().includes("approve") || 
+                    next.content.toLowerCase().includes("authorize") || 
                     next.content.toLowerCase().includes("no") || 
                     next.content.toLowerCase().includes("cancel")
                   )
@@ -197,9 +199,12 @@ const Chatbot = () => {
                 
                 if (resolution) {
                   payload.resolved = true;
+                  const lc = resolution.content.toLowerCase();
                   payload.resolvedStatus = (
-                    resolution.content.toLowerCase().includes("yes") || 
-                    resolution.content.toLowerCase().includes("approve")
+                    lc.includes("yes") || 
+                    lc.includes("approve") ||
+                    lc.includes("authorized") ||
+                    lc.includes("authorized.")
                   ) ? "approve" : "reject";
                 }
                 
