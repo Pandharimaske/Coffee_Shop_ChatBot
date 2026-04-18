@@ -13,55 +13,64 @@ import os
 _checkpointer = None
 
 def _get_checkpointer():
-    """Use PostgresSaver in production (Linux), MemorySaver on macOS dev.
-    psycopg's C extension segfaults on macOS ARM when forked by uvicorn.
+    """
+    Checkpointer strategy:
+    - macOS dev  → SqliteSaver (file-backed, survives --reload, no psycopg issues)
+    - Linux/prod → PostgresSaver via connection pool (Supabase Transaction Pooler)
+    - Fallback   → MemorySaver (last resort, resets on restart)
+
+    psycopg's C extension segfaults on macOS ARM when forked by uvicorn's
+    multiprocessing — that's why we avoid PostgresSaver on Darwin entirely.
     """
     global _checkpointer
     if _checkpointer is not None:
         return _checkpointer
 
     import platform
+    import logging
+    log = logging.getLogger(__name__)
+
     is_mac = platform.system() == "Darwin"
     db_uri = os.getenv("SUPABASE_DB_URL")
 
     if is_mac or not db_uri:
-        # macOS dev: psycopg segfaults, use in-memory
-        from langgraph.checkpoint.memory import MemorySaver
-        _checkpointer = MemorySaver()
+        # macOS dev: use SQLite so checkpoints survive --reload
+        try:
+            from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+            _checkpointer = AsyncSqliteSaver.from_conn_string("./dev_checkpoints.db")
+            log.info("SqliteSaver checkpointer initialised (dev_checkpoints.db)")
+        except Exception as e:
+            log.warning(f"SqliteSaver unavailable ({e}), falling back to MemorySaver")
+            from langgraph.checkpoint.memory import MemorySaver
+            _checkpointer = MemorySaver()
         return _checkpointer
 
     # Production (Linux): use persistent Postgres checkpointer
     try:
         from psycopg_pool import ConnectionPool
         from langgraph.checkpoint.postgres import PostgresSaver
-        
-        # Supabase Transaction Pooler (Port 6543) works best with IPv4 URIs
-        # Transaction Pooler requires prepare_threshold=0
-        # Adding sslmode and timeout as query parameters for better URI compatibility
+
+        # Supabase Transaction Pooler (Port 6543) — requires prepare_threshold=0
         separator = "&" if "?" in db_uri else "?"
         full_uri = f"{db_uri}{separator}sslmode=require&tcp_user_timeout=10000"
-        
+
         pool = ConnectionPool(
             conninfo=full_uri,
             max_size=10,
             open=True,
-            kwargs={
-                "autocommit": True, 
-                "prepare_threshold": 0
-            }
+            kwargs={"autocommit": True, "prepare_threshold": 0},
         )
         saver = PostgresSaver(pool)
         saver.setup()
         _checkpointer = saver
-        import logging
-        logging.getLogger(__name__).info("Postgres checkpointer successfully initialized via IPv4 Pooler URI")
+        log.info("PostgresSaver checkpointer initialised via Supabase Transaction Pooler")
     except Exception as e:
-        import logging
-        logging.getLogger(__name__).warning(f"Postgres checkpointer failed, falling back to MemorySaver: {e}")
+        log.warning(f"PostgresSaver failed, falling back to MemorySaver: {e}")
         from langgraph.checkpoint.memory import MemorySaver
         _checkpointer = MemorySaver()
 
     return _checkpointer
+
 
 
 def build_coffee_shop_graph():

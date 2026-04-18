@@ -275,7 +275,9 @@ def get_embedding_model(model_name: str = None) -> HuggingFaceEndpointEmbeddings
     return _embedding_pool.get_model(model_name=model_name)
 
 
-embedding_model = get_embedding_model()
+# embedding_model is intentionally NOT initialised here.
+# Call get_embedding_model() at the point of use — lazy init on first request.
+# This prevents HuggingFace API latency / outages from blocking server startup.
 
 
 # ── Pinecone removed ──────────────────────────────────────────────────────────

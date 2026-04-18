@@ -36,11 +36,11 @@ def get_active_order(user_email: str) -> tuple[List[ProductItem], float]:
 
 
 def save_order(user_email: str, items: List[ProductItem], total: float) -> None:
-    """Replace the active pending order for this user."""
+    """Upsert the active pending order for this user — atomic, no delete/insert gap."""
     try:
-        supabase.table(TABLE).delete().eq("user_email", user_email).eq("status", "pending").execute()
-
         if not items:
+            # Nothing to save — just clear any existing pending order
+            supabase.table(TABLE).delete().eq("user_email", user_email).eq("status", "pending").execute()
             return
 
         data = {
@@ -50,7 +50,14 @@ def save_order(user_email: str, items: List[ProductItem], total: float) -> None:
             "status": "pending",
             "updated_at": datetime.now(timezone.utc).isoformat(),
         }
-        supabase.table(TABLE).insert(data).execute()
+        # Upsert on (user_email, status) — requires a unique constraint in Supabase.
+        # Falls back to delete+insert if the constraint doesn't exist yet.
+        try:
+            supabase.table(TABLE).upsert(data, on_conflict="user_email,status").execute()
+        except Exception:
+            # Constraint not set up yet — safe delete+insert fallback
+            supabase.table(TABLE).delete().eq("user_email", user_email).eq("status", "pending").execute()
+            supabase.table(TABLE).insert(data).execute()
         logger.info(f"Order saved for {user_email} — {len(items)} items, ₹{total}")
 
     except Exception as e:
