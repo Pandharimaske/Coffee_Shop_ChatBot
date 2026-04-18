@@ -19,6 +19,7 @@ class CoffeeAgentState(BaseModel):
     semantic_memories: str = "" # New context from Mem0
     chat_summary: str = ""
     user_input: str = ""
+    image_url: Optional[str] = None
     response_message: Optional[str] = ""
     order: List[ProductItem] = Field(default_factory=list)
     final_price: float = 0.0

@@ -9,7 +9,7 @@ import Register from "./components/Register";
 import RequireAuth from "./components/RequireAuth";
 import RequireAdmin from "./components/RequireAdmin";
 import ProfileDrawer from "./components/ProfileDrawer";
-// import AdminDashboard from "./components/AdminDashboard";
+import AdminDashboard from "./components/AdminDashboard";
 import CartToast from "./components/CartToast";
 import { useAuth } from "./context/AuthContext";
 import { useCart } from "./context/CartContext";
@@ -59,14 +59,14 @@ function Navbar() {
           <div className="flex items-center gap-3">
             {user ? (
               <>
-                {/* {user.is_admin && (
+                {user.is_admin && (
                   <Link
                     to="/admin"
                     className="flex items-center gap-1.5 text-xs font-bold text-[#1a1714] bg-gradient-to-r from-[#dfc18b] to-[#a37c35] px-3 py-1.5 rounded-full hover:shadow-[0_0_15px_rgba(223,193,139,0.4)] transition-all hover:scale-105"
                   >
                     <LayoutDashboard size={14} /> <span className="hidden sm:inline">Admin</span>
                   </Link>
-                )} */}
+                )}
                 <button
                   onClick={() => setShowProfile(true)}
                   className="w-8 h-8 rounded-full bg-[#201d1a] border border-white/10 flex items-center justify-center text-white hover:bg-white/10 hover:border-white/20 hover:scale-105 transition-all text-xs font-bold shadow-md"
@@ -193,7 +193,7 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/order" element={<RequireAuth><Order /></RequireAuth>} />
-            {/* <Route path="/admin" element={<RequireAdmin><AdminDashboard /></RequireAdmin>} /> */}
+            <Route path="/admin" element={<RequireAdmin><AdminDashboard /></RequireAdmin>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </PageWrapper>

@@ -33,12 +33,30 @@ async def input_processor_agent(state: CoffeeAgentState) -> Command:
             for m in recent_messages
         ]) or "(no prior messages)"
 
-        result: InputProcessorResponse = await _chain.ainvoke({
+        inputs = {
             "user_input": user_input,
             "messages": formatted_messages,
             "user_memory": state.user_memory.model_dump(),
             "order": [f"{i.name} x{i.quantity}" for i in state.order] or "empty",
-        })
+        }
+
+        if state.image_url:
+            from langchain_core.messages import HumanMessage
+            # Construct a multimodal message for models like Gemini 1.5 Flash
+            # We combine the text instructions and the image URL
+            content = [
+                {"type": "text", "text": f"User Input: {user_input}\nContext: {formatted_messages}"},
+                {"type": "image_url", "image_url": {"url": state.image_url}}
+            ]
+            # When image is present, we invoke the model with the system prompt manually
+            system_prompt = input_processor_prompt.messages[0].prompt.template
+            messages = [
+                ("system", system_prompt),
+                HumanMessage(content=content)
+            ]
+            result: InputProcessorResponse = await small_llm.with_structured_output(InputProcessorResponse).ainvoke(messages)
+        else:
+            result: InputProcessorResponse = await _chain.ainvoke(inputs)
 
         if result.decision == "blocked":
             logger.info(f"Input Processor: BLOCKED — {result.response_message[:40]}")

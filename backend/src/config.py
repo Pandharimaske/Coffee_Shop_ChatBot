@@ -47,12 +47,9 @@ class Settings(BaseSettings):
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
     hf_api_key: str = ""
 
-    # ── Pinecone ──────────────────────────────────────────────────────────────
-    pinecone_api_key: str = ""
+    # ── Pinecone (DEPRECATED: Using Supabase pgvector) ──────────────────────
+    pinecone_api_key: Optional[str] = None
     pinecone_index_name: str = "coffee-products"
-    pinecone_index_prefix: str = "coffee-shop"
-    pinecone_region: str = "us-east-1"
-    pinecone_dimension: int = 768
 
     # ── Retriever ─────────────────────────────────────────────────────────────
     retriever_default_top_k: int = 5
@@ -97,7 +94,6 @@ class Settings(BaseSettings):
             name for name, val in {
                 "OPENROUTER_API_KEY": self.openrouter_api_key,
                 "HF_API_KEY": self.hf_api_key,
-                "PINECONE_API_KEY": self.pinecone_api_key,
                 "SUPABASE_URL": self.supabase_url,
                 "SUPABASE_KEY": self.supabase_key,
             }.items() if not val
@@ -135,9 +131,6 @@ class Config:
 
     PINECONE_API_KEY = settings.pinecone_api_key
     PINECONE_INDEX_NAME = settings.pinecone_index_name
-    PINECONE_INDEX_PREFIX = settings.pinecone_index_prefix
-    PINECONE_REGION = settings.pinecone_region
-    PINECONE_DIMENSION = settings.pinecone_dimension
 
     RETRIEVER_DEFAULT_TOP_K = settings.retriever_default_top_k
     RETRIEVER_MAX_TOP_K = settings.retriever_max_top_k

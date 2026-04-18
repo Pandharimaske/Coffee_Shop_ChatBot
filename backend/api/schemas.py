@@ -52,6 +52,7 @@ class PreferencesResponse(BaseModel):
 class ChatRequest(BaseModel):
     user_input: str
     session_id: Optional[str] = None
+    image_url: Optional[str] = None
 
 
 class ChatResponse(BaseModel):

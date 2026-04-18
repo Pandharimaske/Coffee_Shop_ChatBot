@@ -1,0 +1,125 @@
+[
+  {
+    "type": "table",
+    "name": "coffee_shop_profiles",
+    "description": "User profiles and customer data. Contains names, preferences (likes/dislikes), allergies, feedback, and admin status. Use this table to answer questions about customer demographics, preferences, or to count total users."
+  },
+  {
+    "type": "column",
+    "table": "coffee_shop_profiles",
+    "name": "user_email",
+    "description": "Unique email address identifying the user. Primary key."
+  },
+  {
+    "type": "column",
+    "table": "coffee_shop_profiles",
+    "name": "name",
+    "description": "The full name of the customer."
+  },
+  {
+    "type": "column",
+    "table": "coffee_shop_profiles",
+    "name": "likes",
+    "description": "A list of flavors or items the user prefers (e.g. ['Vanilla', 'Dark Chocolate'])."
+  },
+  {
+    "type": "column",
+    "table": "coffee_shop_profiles",
+    "name": "dislikes",
+    "description": "A list of flavors or items the user avoids."
+  },
+  {
+    "type": "column",
+    "table": "coffee_shop_profiles",
+    "name": "allergies",
+    "description": "Critical health information about customer allergies (e.g. ['Nuts', 'Dairy'])."
+  },
+  {
+    "type": "column",
+    "table": "coffee_shop_profiles",
+    "name": "location",
+    "description": "The customer's preferred delivery or city location."
+  },
+  {
+    "type": "column",
+    "table": "coffee_shop_profiles",
+    "name": "is_admin",
+    "description": "Boolean flag indicating if the user has administrative privileges. Use this to find how many admins exist."
+  },
+  {
+    "type": "table",
+    "name": "coffee_shop_products",
+    "description": "The product catalog or menu. Contains item names, categories, descriptions, prices, ratings, and ingredients. Use this to answer questions about available items, menu variety, or pricing."
+  },
+  {
+    "type": "column",
+    "table": "coffee_shop_products",
+    "name": "name",
+    "description": "Name of the coffee or food item (e.g., 'Latte', 'Croissant')."
+  },
+  {
+    "type": "column",
+    "table": "coffee_shop_products",
+    "name": "price",
+    "description": "Price of the item in Indian Rupees (₹)."
+  },
+  {
+    "type": "column",
+    "table": "coffee_shop_products",
+    "name": "category",
+    "description": "Category of the product (e.g., 'Coffee', 'Desserts', 'Snacks')."
+  },
+  {
+    "type": "column",
+    "table": "coffee_shop_products",
+    "name": "description",
+    "description": "Long form description of the product's taste and profile."
+  },
+  {
+    "type": "column",
+    "table": "coffee_shop_products",
+    "name": "rating",
+    "description": "Average customer rating for this product (out of 5)."
+  },
+  {
+    "type": "column",
+    "table": "coffee_shop_products",
+    "name": "ingredients",
+    "description": "List of key ingredients in the product."
+  },
+  {
+    "type": "table",
+    "name": "coffee_shop_orders",
+    "description": "Transactional data for all customer orders. Contains user email, order items, total amount, status (pending/confirmed), and timestamps. Use this for revenue analysis, sales tracking, and order history."
+  },
+  {
+    "type": "column",
+    "table": "coffee_shop_orders",
+    "name": "items",
+    "description": "JSON field containing ordered items. Important: to query item names/quantities, use: jsonb_array_elements(items) AS item. Each item has {name, quantity, per_unit_price, total_price}."
+  },
+  {
+    "type": "column",
+    "table": "coffee_shop_orders",
+    "name": "total",
+    "description": "The total monetary value of the order."
+  },
+  {
+    "type": "column",
+    "table": "coffee_shop_orders",
+    "name": "status",
+    "description": "Current status of the order. Possible values are 'pending' or 'confirmed'. Always filter for 'confirmed' in BI queries unless requested otherwise."
+  },
+  {
+    "type": "column",
+    "table": "coffee_shop_orders",
+    "name": "updated_at",
+    "description": "Timestamp of the order. Use this for all date-based calculations (today, this week, monthly)."
+  },
+  {
+    "type": "column",
+    "table": "coffee_shop_orders",
+    "name": "user_email",
+    "description": "Email of the user who placed the order. Link this with coffee_shop_profiles to find customer details."
+  }
+]

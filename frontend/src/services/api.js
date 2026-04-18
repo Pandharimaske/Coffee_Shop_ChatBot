@@ -20,6 +20,15 @@ function getSessionId() {
   return sid;
 }
 
+function getAdminSessionId() {
+  let sid = localStorage.getItem("admin_session_id");
+  if (!sid || sid.length !== 36) {
+    sid = crypto.randomUUID();
+    localStorage.setItem("admin_session_id", sid);
+  }
+  return sid;
+}
+
 async function request(method, path, body = null, auth = true) {
   const headers = { "Content-Type": "application/json" };
   if (auth) {
@@ -92,7 +101,10 @@ export const chatAPI = {
     }),
 
   sendStream: async (userInput) => {
-    const body = { user_input: userInput, session_id: getSessionId() };
+    const body = { 
+      user_input: userInput, 
+      session_id: getSessionId()
+    };
     const headers = { "Content-Type": "application/json" };
     const token = getToken();
     if (token) headers["Authorization"] = `Bearer ${token}`;
@@ -108,6 +120,8 @@ export const chatAPI = {
     }
     return res.body; 
   },
+
+
 
   // Load message history for current session (called on mount/refresh)
   getHistory: () =>
@@ -134,7 +148,9 @@ export const ordersAPI = {
 // ── Admin ─────────────────────────────────────────────────────────────────────
 
 export const adminAPI = {
-  chat: (query) => request("POST", "/admin/chat", { query }),
+  chat: ({ query, session_id }) => request("POST", "/admin/chat", { query, session_id }),
+  getHistory: (session_id) => request("GET", `/admin/history?session_id=${session_id}`),
+  getSessionId: getAdminSessionId,
 };
 
 export { getSessionId, getToken };

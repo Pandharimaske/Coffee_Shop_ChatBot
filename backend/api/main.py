@@ -8,7 +8,7 @@ from api.routers import (
     chat_router,
     orders_router,
     products_router,
-    # admin_router,
+    admin_router,
 )
 
 app = FastAPI(
@@ -42,7 +42,7 @@ app.include_router(users_router)
 app.include_router(chat_router)
 app.include_router(orders_router)
 app.include_router(products_router)
-# app.include_router(admin_router)
+app.include_router(admin_router)
 
 
 # ── Health ────────────────────────────────────────────────────────────────────

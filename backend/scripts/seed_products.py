@@ -16,6 +16,8 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
+from langchain_huggingface import HuggingFaceEndpointEmbeddings
+
 # Seed script needs service role key to bypass RLS
 supabase = create_client(
     os.getenv("SUPABASE_URL"),
@@ -27,15 +29,30 @@ DATA_PATH = os.path.join(
     "../data/products_data/products.jsonl"
 )
 
+# Initialize embeddings
+embeddings_model = HuggingFaceEndpointEmbeddings(
+    model="BAAI/bge-base-en-v1.5",
+    huggingfacehub_api_token=os.getenv("HF_API_KEY")
+)
+
 
 def seed():
     products = []
+    names = []
+    
     with open(DATA_PATH, "r") as f:
         for line in f:
             line = line.strip()
             if not line:
                 continue
             data = json.loads(line)
+            names.append(data["name"])
+            # Construct Supabase Storage URL
+            image_path = data.get("image_path")
+            supabase_url = os.getenv("SUPABASE_URL")
+            bucket_name = "product-images"
+            image_url = f"{supabase_url}/storage/v1/object/public/{bucket_name}/{image_path}" if image_path else None
+
             products.append({
                 "name": data["name"],
                 "category": data.get("category"),
@@ -43,20 +60,27 @@ def seed():
                 "price": float(data["price"]),
                 "rating": float(data["rating"]) if data.get("rating") else None,
                 "ingredients": data.get("ingredients", []),
-                "image_url": f"/images/{data['image_path']}" if data.get("image_path") else None,
+                "image_url": image_url,
             })
 
     if not products:
         print("No products found in JSONL file.")
         return
 
-    print(f"Seeding {len(products)} products...")
+    print(f"Generating embeddings for {len(names)} products via HF API...")
+    # Generate embeddings in batch
+    embeddings = embeddings_model.embed_documents(names)
+    
+    for i, product in enumerate(products):
+        product["embedding"] = embeddings[i]
+
+    print(f"Seeding {len(products)} products to Supabase...")
     res = supabase.table("coffee_shop_products").upsert(products, on_conflict="name").execute()
 
     if res.data:
-        print(f"✅ Seeded {len(res.data)} products successfully.")
+        print(f"✅ Seeded {len(res.data)} products successfully with embeddings.")
     else:
-        print("⚠️  Upsert returned no data — check Supabase logs.")
+        print("⚠️  Upsert returned no data — check Supabase logs and if 'embedding' column exists.")
 
 
 if __name__ == "__main__":

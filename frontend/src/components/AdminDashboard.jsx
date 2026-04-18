@@ -4,75 +4,76 @@ import { motion, AnimatePresence } from "framer-motion";
 import { adminAPI } from "../services/api";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
+  PieChart, Pie, LineChart, Line, Legend
+} from "recharts";
 
 const Spinner = () => (
   <div className="w-5 h-5 border-2 border-t-transparent border-[#dfc18b] rounded-full animate-spin" />
 );
 
-// Custom markdown renderer intercepting JSON blocks for graphs
+// New Chart Renderer component that works from structured state
+const ChartRenderer = ({ state }) => {
+  if (!state || state.chart_type === "none") return null;
+
+  const { chart_type, chart_data } = state;
+  const COLORS = ['#dfc18b', '#a37c35', '#7e5d26', '#d4af37', '#b8860b'];
+
+  return (
+    <div className="h-80 w-full bg-white/5 backdrop-blur-md p-6 rounded-2xl shadow-2xl my-6 border border-white/10">
+      <ResponsiveContainer width="100%" height="100%">
+        {chart_type === "bar" ? (
+          <BarChart data={chart_data} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
+            <defs>
+              <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#dfc18b" />
+                <stop offset="100%" stopColor="#a37c35" />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#a8a19c', fontSize: 11}} dy={10} />
+            <YAxis axisLine={false} tickLine={false} tick={{fill: '#a8a19c', fontSize: 11}} />
+            <Tooltip contentStyle={{backgroundColor: '#1a1714', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', color: '#fff'}} />
+            <Bar dataKey="value" fill="url(#barGradient)" radius={[6, 6, 0, 0]} barSize={32} />
+          </BarChart>
+        ) : chart_type === "pie" ? (
+          <PieChart>
+            <Pie
+              data={chart_data}
+              cx="50%"
+              cy="50%"
+              innerRadius={60}
+              outerRadius={80}
+              paddingAngle={5}
+              dataKey="value"
+            >
+              {chart_data.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              ))}
+            </Pie>
+            <Tooltip contentStyle={{backgroundColor: '#1a1714', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', color: '#fff'}} />
+            <Legend verticalAlign="bottom" height={36}/>
+          </PieChart>
+        ) : chart_type === "line" ? (
+          <LineChart data={chart_data} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#a8a19c', fontSize: 11}} dy={10} />
+            <YAxis axisLine={false} tickLine={false} tick={{fill: '#a8a19c', fontSize: 11}} />
+            <Tooltip contentStyle={{backgroundColor: '#1a1714', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', color: '#fff'}} />
+            <Line type="monotone" dataKey="value" stroke="#dfc18b" strokeWidth={3} dot={{ r: 4, fill: '#dfc18b' }} activeDot={{ r: 6 }} />
+          </LineChart>
+        ) : null}
+      </ResponsiveContainer>
+    </div>
+  );
+};
+
 function AdminMarkdown({ content }) {
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
       components={{
-        code({ node, inline, className, children, ...props }) {
-          const match = /language-(\w+)/.exec(className || "");
-          if (!inline && match && match[1] === "json") {
-            try {
-              const data = JSON.parse(String(children).replace(/\n$/, ""));
-              
-              if (data.type === "recharts_bar") {
-                return (
-                  <div className="h-80 w-full bg-white/5 backdrop-blur-md p-6 rounded-2xl shadow-2xl my-6 border border-white/10">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={data.data} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
-                        <defs>
-                          <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#dfc18b" />
-                            <stop offset="100%" stopColor="#a37c35" />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                        <XAxis 
-                          dataKey={data.xKey} 
-                          axisLine={false} 
-                          tickLine={false} 
-                          tick={{fill: '#a8a19c', fontSize: 12}} 
-                          dy={10} 
-                        />
-                        <YAxis 
-                          axisLine={false} 
-                          tickLine={false} 
-                          tick={{fill: '#a8a19c', fontSize: 12}} 
-                        />
-                        <Tooltip 
-                          cursor={{fill: 'rgba(255,255,255,0.05)'}} 
-                          contentStyle={{
-                            backgroundColor: '#1a1714', 
-                            borderRadius: '12px', 
-                            border: '1px solid rgba(255,255,255,0.1)', 
-                            boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
-                            color: '#fff'
-                          }} 
-                        />
-                        <Bar 
-                          dataKey={data.yKey} 
-                          fill="url(#barGradient)" 
-                          radius={[6, 6, 0, 0]} 
-                          barSize={32} 
-                        />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                );
-              }
-            } catch (e) {
-              return <code className={className} {...props}>{children}</code>;
-            }
-          }
-          return <code className="bg-white/10 text-[#dfc18b] px-1.5 py-0.5 rounded text-sm font-mono" {...props}>{children}</code>;
-        },
         table: ({ children }) => (
           <div className="overflow-x-auto my-6 w-full rounded-2xl border border-white/10 shadow-2xl bg-white/5 backdrop-blur-md">
             <table className="min-w-full text-sm text-left">{children}</table>
@@ -93,29 +94,74 @@ function AdminMarkdown({ content }) {
 }
 
 const AdminDashboard = () => {
-  const [messages, setMessages] = useState([
-    { role: "bot", content: "Welcome to the BI Command Center. Ask anything! Try:\n- `Plot the top 3 selling items by total quantity`\n- `Show me all active orders as a table`\n- `What was our total revenue today?`" }
-  ]);
+  const [messages, setMessages] = useState([]);
   const [query, setQuery] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const bottomRef = useRef(null);
+  const sessionId = adminAPI.getSessionId();
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
 
+  // Load persisted history from Supabase on mount
+  useEffect(() => {
+    const loadHistory = async () => {
+      setIsLoadingHistory(true);
+      try {
+        const res = await adminAPI.getHistory(sessionId);
+        const stored = res.history || [];
+        if (stored.length === 0) {
+          setMessages([{ 
+            role: "bot", 
+            content: "Welcome, Commander. I am your BI Intelligence Agent. Ask me anything about your sales, products, or customer patterns.",
+            state: { chart_type: "none" }
+          }]);
+        } else {
+          // Reconstruct messages from stored history
+          const reconstructed = stored.map((h) => {
+            if (h.role === "user") {
+              return { role: "user", content: h.content };
+            } else {
+              return { role: "bot", content: h.content, state: h.state || { chart_type: "none" } };
+            }
+          });
+          setMessages(reconstructed);
+        }
+      } catch (e) {
+        // Fallback to welcome message if history load fails
+        setMessages([{ 
+          role: "bot", 
+          content: "Welcome, Commander. I am your BI Intelligence Agent. Ask me anything about your sales, products, or customer patterns.",
+          state: { chart_type: "none" }
+        }]);
+      } finally {
+        setIsLoadingHistory(false);
+      }
+    };
+    loadHistory();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleSend = async () => {
     if (!query.trim() || isTyping) return;
     const msg = query;
+
     setQuery("");
     setMessages(prev => [...prev, { role: "user", content: msg }]);
     setIsTyping(true);
     
     try {
-      const res = await adminAPI.chat(msg);
-      setMessages(prev => [...prev, { role: "bot", content: res.reply }]);
+      const res = await adminAPI.chat({ query: msg, session_id: sessionId });
+      // res contains { reply: "...", state: { ... } }
+      setMessages(prev => [...prev, { 
+        role: "bot", 
+        content: res.reply, 
+        state: res.state 
+      }]);
     } catch (e) {
-      setMessages(prev => [...prev, { role: "bot", content: `**Error communicating with BI Agent:** ${e.message}` }]);
+      setMessages(prev => [...prev, { role: "bot", content: `**Error communicating with BI Agent:** ${e.message}`, state: { chart_type: "none" } }]);
     } finally {
       setIsTyping(false);
     }
@@ -123,11 +169,9 @@ const AdminDashboard = () => {
 
   return (
     <div className="min-h-[85vh] bg-[#1a1714] flex flex-col mt-6 shadow-[0_30px_100px_rgba(0,0,0,0.6)] rounded-3xl overflow-hidden border border-white/10 relative ring-1 ring-[#dfc18b]/10">
-      {/* Decorative Orbs */}
       <div className="absolute -top-24 -left-24 w-96 h-96 bg-[#dfc18b] rounded-full blur-[120px] opacity-[0.07] pointer-events-none" />
       <div className="absolute top-1/2 -right-48 w-80 h-80 bg-[#a37c35] rounded-full blur-[100px] opacity-[0.05] pointer-events-none" />
 
-      {/* Header */}
       <div className="bg-[#1a1714]/80 backdrop-blur-xl text-white p-8 border-b border-white/5 flex items-center justify-between relative z-10 shrink-0">
         <div className="flex items-center gap-5">
           <div className="p-4 bg-gradient-to-br from-[#dfc18b]/20 to-[#a37c35]/20 rounded-2xl backdrop-blur-md border border-[#dfc18b]/20 shadow-[0_0_20px_rgba(223,193,139,0.2)]">
@@ -137,17 +181,20 @@ const AdminDashboard = () => {
             <h1 className="text-2xl font-black tracking-tight uppercase italic flex items-center gap-2">
               BI <span className="text-[#dfc18b]">Intelligence</span>
             </h1>
-            <p className="text-[#a8a19c] text-sm font-medium tracking-wide">Secure conversation with your data warehouse</p>
+            <p className="text-[#a8a19c] text-sm font-medium tracking-wide">State-driven command center for secure operations</p>
           </div>
-        </div>
-        <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-white/5 rounded-full border border-white/10">
-          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-          <span className="text-[10px] font-bold uppercase tracking-widest text-[#a8a19c]">System Active</span>
         </div>
       </div>
 
-      {/* Chat Area */}
       <div className="flex-grow p-6 sm:p-10 overflow-y-auto space-y-8 custom-scrollbar">
+        {isLoadingHistory && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-center items-center py-12">
+            <div className="flex items-center gap-3 text-[#a8a19c] text-sm font-medium tracking-wide">
+              <div className="w-4 h-4 border-2 border-t-transparent border-[#dfc18b] rounded-full animate-spin" />
+              <span>Restoring session...</span>
+            </div>
+          </motion.div>
+        )}
         <AnimatePresence initial={false}>
           {messages.map((m, i) => (
             <motion.div 
@@ -168,73 +215,45 @@ const AdminDashboard = () => {
                   ? "bg-gradient-to-br from-[#dfc18b] to-[#a37c35] text-[#1a1714] rounded-tr-none font-semibold" 
                   : "bg-white/5 border border-white/10 text-white rounded-tl-none backdrop-blur-md"
                 }`}>
-                  {m.role === "user" 
-                    ? <p className="whitespace-pre-wrap leading-relaxed">{m.content}</p> 
-                    : <AdminMarkdown content={m.content} />
-                  }
+                  {m.role === "user" ? (
+                    <p className="whitespace-pre-wrap leading-relaxed">{m.content}</p>
+                  ) : (
+                    <div>
+                      <AdminMarkdown content={m.content} />
+                      {m.state && <ChartRenderer state={m.state} />}
+                    </div>
+                  )}
                 </div>
-                {m.role === "user" && (
-                  <div className="w-8 h-8 rounded-full bg-[#dfc18b] flex items-center justify-center shrink-0 mt-1">
-                    <User size={16} className="text-[#1a1714]" />
-                  </div>
-                )}
               </div>
             </motion.div>
           ))}
         </AnimatePresence>
         
         {isTyping && (
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="flex justify-start items-center gap-3"
-          >
-            <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
-              <Bot size={16} className="text-[#dfc18b]" />
-            </div>
-            <div className="px-6 py-4 bg-white/5 border border-white/10 rounded-2xl rounded-tl-none flex items-center gap-3 backdrop-blur-md shadow-lg">
-              <div className="flex gap-1">
-                {[0, 1, 2].map(dot => (
-                  <motion.div 
-                    key={dot}
-                    animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }}
-                    transition={{ repeat: Infinity, duration: 1.5, delay: dot * 0.2 }}
-                    className="w-1.5 h-1.5 rounded-full bg-[#dfc18b]"
-                  />
-                ))}
-              </div>
-              <span className="text-[#dfc18b] text-xs font-black uppercase tracking-widest italic">SQL Agent Thinking...</span>
+          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex justify-start items-center gap-3">
+            <div className="px-6 py-4 bg-white/5 border border-white/10 rounded-2xl rounded-tl-none flex items-center gap-3 backdrop-blur-md">
+              <span className="text-[#dfc18b] text-xs font-black uppercase tracking-widest italic animate-pulse transition-all">Analyzing Database...</span>
             </div>
           </motion.div>
         )}
         <div ref={bottomRef} />
       </div>
 
-      {/* Input Area */}
       <div className="p-6 bg-[#1a1714]/80 backdrop-blur-2xl border-t border-white/5 relative z-20 shrink-0">
         <div className="max-w-4xl mx-auto relative group">
-          <div className="absolute -inset-1 bg-gradient-to-r from-[#dfc18b] to-[#a37c35] rounded-3xl blur opacity-10 group-focus-within:opacity-20 transition duration-500" />
-          <div className="relative flex items-center gap-4 bg-[#1a1714] border border-white/10 rounded-2xl px-6 py-2 shadow-2xl focus-within:border-[#dfc18b]/40 transition-all">
+          <div className="relative flex items-center gap-4 bg-[#1a1714] border border-white/10 rounded-2xl px-6 py-2 shadow-2xl">
             <FaTerminal className="text-[#dfc18b] opacity-40 shrink-0" size={18} />
             <input 
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
-              placeholder="Query data (e.g. Plot top selling coffee types)..."
+              placeholder="Query data (e.g. Compare total revenue as a pie chart)..."
               className="flex-grow bg-transparent focus:outline-none text-white py-4 text-lg placeholder-white/20 font-medium"
             />
-            <motion.button 
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleSend}
-              disabled={isTyping}
-              className={`px-8 py-3.5 rounded-xl text-[#1a1714] font-black uppercase tracking-widest italic text-sm transition-all flex items-center gap-2 shadow-[0_10px_30px_rgba(223,193,139,0.3)] ${
-                isTyping ? "bg-gray-700/50 cursor-not-allowed text-gray-400" : "bg-gradient-to-r from-[#dfc18b] to-[#a37c35] hover:shadow-[0_15px_40px_rgba(223,193,139,0.4)]"
-              }`}
-            >
-              {isTyping ? <Spinner /> : <><FaPaperPlane size={14} /> Execute</>}
-            </motion.button>
+            <button onClick={handleSend} disabled={isTyping} className="bg-gradient-to-r from-[#dfc18b] to-[#a37c35] p-3 rounded-xl">
+              {isTyping ? <Spinner /> : <FaPaperPlane size={14} className="text-[#1a1714]" />}
+            </button>
           </div>
         </div>
       </div>
@@ -243,7 +262,6 @@ const AdminDashboard = () => {
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.05); border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(223,193,139,0.2); }
       `}</style>
     </div>
   );

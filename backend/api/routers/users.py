@@ -7,18 +7,20 @@ from src.memory.schemas import UserMemory
 router = APIRouter(prefix="/user", tags=["user"])
 
 
-from src.memory.supabase_client import supabase
+from src.memory.supabase_client import supabase, supabase_admin
 
 @router.get("/me", response_model=UserResponse)
 async def get_me(current_user: CurrentUser):
-    # Fetch is_admin from profiles
+    # Fetch is_admin from profiles using supabase_admin to bypass RLS
     is_admin = False
     try:
-        res = supabase.table("coffee_shop_profiles").select("is_admin").eq("user_email", current_user.email).execute()
+        user_email = current_user.email.lower().strip()
+        res = supabase_admin.table("coffee_shop_profiles").select("is_admin").eq("user_email", user_email).execute()
         if res.data and res.data[0].get("is_admin"):
             is_admin = True
-    except Exception:
-        pass
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Error checking admin status for {current_user.email}: {e}")
         
     return UserResponse(
         id=current_user.id,

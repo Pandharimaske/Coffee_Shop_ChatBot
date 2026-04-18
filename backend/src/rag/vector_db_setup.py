@@ -156,7 +156,7 @@ class VectorDBSetup:
                 }
                 
                 vectors.append({
-                    "id": str(uuid.uuid4()),
+                    "id": row["name_normalized"],
                     "values": batch_embeddings[idx],
                     "metadata": metadata
                 })

@@ -1,5 +1,11 @@
+# Project-specific ignores
 /data/products_data/images
 /experiments
+/scratch
+/logs
+/artifacts
+requirements.txt
+.DS_Store
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

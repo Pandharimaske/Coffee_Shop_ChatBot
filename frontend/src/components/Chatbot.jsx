@@ -149,6 +149,7 @@ const Chatbot = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [checkoutPayload, setCheckoutPayload] = useState(null);
   const inputRef = useRef(null);
+
   const textRef = useRef("");
   const bottomRef = useRef(null);
 
@@ -243,16 +244,24 @@ const Chatbot = () => {
 
   const handleSend = async () => {
     const message = textRef.current.trim();
-    if (!message || isTyping) return;
+    if (!message) return;
+    if (isTyping) return;
+
+    const currentMessage = message;
 
     textRef.current = "";
     if (inputRef.current) inputRef.current.value = "";
 
-    setMessages((prev) => [...prev, { role: "user", content: message, timestamp: new Date() }]);
+    setMessages((prev) => [...prev, { 
+        role: "user", 
+        content: currentMessage, 
+        timestamp: new Date() 
+    }]);
     setIsTyping(true);
 
+
     try {
-      const stream = await chatAPI.sendStream(message);
+      const stream = await chatAPI.sendStream(currentMessage);
       const reader = stream.getReader();
       const decoder = new TextDecoder("utf-8");
 
@@ -507,7 +516,11 @@ const Chatbot = () => {
                   : "bg-white/5 border border-white/10 text-white rounded-bl-none shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
               }`}>
                 {msg.role === "user"
-                  ? <p className="leading-relaxed whitespace-pre-wrap text-sm">{msg.content}</p>
+                  ? (
+                    <div className="space-y-2">
+                        <p className="leading-relaxed whitespace-pre-wrap text-sm">{msg.content}</p>
+                    </div>
+                  )
                   : msg.type === "interrupt" 
                     ? <InterruptBubble payload={msg.content} onResolve={(status) => handleResolveInterrupt(i, msg.content, status)} />
                     : <BotMarkdown content={msg.content} />}
@@ -535,8 +548,11 @@ const Chatbot = () => {
           <div ref={bottomRef} />
         </div>
 
-        {/* Input */}
+        {/* Input area */}
         <div className="px-4 py-4 border-t border-[#dfc18b]/30 flex flex-col gap-2 bg-[#1a1714]/80 backdrop-blur-md rounded-b-3xl shrink-0">
+          
+
+
           {isInterruptPending && (
             <p className="text-center text-xs text-[#dfc18b] font-medium animate-pulse">
               👆 Please tap a button above to continue
@@ -546,7 +562,7 @@ const Chatbot = () => {
             <input
               ref={inputRef}
               type="text"
-              placeholder={isInterruptPending ? "Use the buttons above to respond..." : "Ask about our menu or place an order..."}
+              placeholder={isInterruptPending ? "Use the buttons above..." : "Message Merry's Way..."}
               disabled={isTyping || isInterruptPending}
               className={`flex-grow px-5 py-3 rounded-full border text-sm focus:outline-none focus:ring-2 focus:ring-[#dfc18b] focus:border-transparent transition-all shadow-inner ${
                 isInterruptPending

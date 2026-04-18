@@ -1,6 +1,6 @@
 import uuid
 import json
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, UploadFile, File
 from fastapi.responses import StreamingResponse
 from api.auth import CurrentUser
 from api.schemas import ChatRequest, ChatResponse, MessageHistoryResponse, ResumeRequest
@@ -11,11 +11,34 @@ from src.graph.state import CoffeeAgentState
 from src.memory.memory_manager import get_user_memory
 from src.orders import get_active_order
 from src.sessions import get_or_create_session, load_messages, save_messages, append_message, append_messages
-
+from src.memory.supabase_client import supabase_admin
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
 _graph = build_coffee_shop_graph()
+
+
+@router.post("/upload")
+async def upload_image(file: UploadFile = File(...), current_user: CurrentUser = None):
+    """Upload an image to Supabase Storage and return the public URL."""
+    try:
+        file_ext = file.filename.split(".")[-1]
+        file_name = f"{uuid.uuid4()}.{file_ext}"
+        content = await file.read()
+        
+        # Upload to 'chat_images' bucket
+        res = supabase_admin.storage.from_("chat_images").upload(
+            path=file_name,
+            file=content,
+            file_options={"content-type": file.content_type}
+        )
+        
+        # Get Public URL
+        url_res = supabase_admin.storage.from_("chat_images").get_public_url(file_name)
+        return {"url": url_res}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
 
 
 @router.get("/history", response_model=list[MessageHistoryResponse])
@@ -154,6 +177,7 @@ async def stream_chat(body: ChatRequest, current_user: CurrentUser):
 
     state = CoffeeAgentState(
         user_input=body.user_input,
+        image_url=body.image_url,
         user_memory=user_memory or CoffeeAgentState().user_memory,
         order=order,
         final_price=final_price,
