@@ -8,7 +8,7 @@ from src.memory.memory_manager import (
     remove_from_memory,
     replace_in_memory,
 )
-from src.memory.supabase_client import supabase
+from src.memory.supabase_client import supabase, supabase_admin
 
 __all__ = [
     "UserMemory",
@@ -18,4 +18,5 @@ __all__ = [
     "remove_from_memory",
     "replace_in_memory",
     "supabase",
+    "supabase_admin",
 ]
