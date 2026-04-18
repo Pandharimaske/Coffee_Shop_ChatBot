@@ -1,7 +1,6 @@
-"""Recommendation Agent — Hybrid ML model + LLM formatter."""
-
 import logging
 from datetime import datetime
+from threading import Lock
 from langchain_core.messages import AIMessage
 from langgraph.types import Command
 from langgraph.graph import END
@@ -15,14 +14,18 @@ logger = logging.getLogger(__name__)
 
 _chain = recommendation_prompt | llm
 
-# Load model once at startup — auto-fits if no saved model found
+# Thread-safe lazy singleton — load once at first request, never re-load
 _recommender: HybridRecommender = None
+_recommender_lock = Lock()
+
 
 def _get_recommender() -> HybridRecommender:
     global _recommender
     if _recommender is None:
-        logger.info("Loading HybridRecommender...")
-        _recommender = HybridRecommender.load()
+        with _recommender_lock:           # only one thread fits/loads at a time
+            if _recommender is None:      # double-checked — re-test inside lock
+                logger.info("Loading HybridRecommender...")
+                _recommender = HybridRecommender.load()
     return _recommender
 
 

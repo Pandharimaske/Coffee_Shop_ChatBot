@@ -20,8 +20,6 @@ from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain_groq import ChatGroq
 from langchain_huggingface import HuggingFaceEndpointEmbeddings
-from langchain_pinecone import PineconeVectorStore
-from pinecone import Pinecone, ServerlessSpec, PineconeException
 
 from src.config import Config
 
@@ -280,188 +278,10 @@ def get_embedding_model(model_name: str = None) -> HuggingFaceEndpointEmbeddings
 embedding_model = get_embedding_model()
 
 
-# ============================================================
-# Pinecone Configuration (with health checks)
-# ============================================================
-
-class PineconePool:
-    """Managed Pinecone client with health checks."""
-
-    _instance = None
-    _lock = threading.Lock()
-    _client = None
-    _indices = {}
-
-    def __new__(cls):
-        if cls._instance is None:
-            with cls._lock:
-                if cls._instance is None:
-                    cls._instance = super().__new__(cls)
-                    cls._instance._initialized = False
-        return cls._instance
-
-    def __init__(self):
-        if self._initialized:
-            return
-        self.health_checker = HealthChecker()
-        self._lock = threading.Lock()
-        self._initialized = True
-        logger.info("PineconePool initialized")
-
-    def get_client(self) -> Pinecone:
-        """Get or create Pinecone client (singleton)."""
-        if PineconePool._client is not None:
-            return PineconePool._client
-
-        with self._lock:
-            if PineconePool._client is None:
-                try:
-                    logger.info("Creating Pinecone client")
-                    PineconePool._client = Pinecone(api_key=Config.PINECONE_API_KEY)
-                    self.health_checker.mark_check(True)
-                except Exception as e:
-                    logger.error(f"Failed to create Pinecone client: {str(e)}")
-                    self.health_checker.mark_check(False)
-                    raise
-
-        return PineconePool._client
-
-    def get_index(self, index_name: str = None):
-        """Get or cache Pinecone index."""
-        index_name = index_name or Config.PINECONE_INDEX_NAME
-
-        if index_name in PineconePool._indices:
-            logger.debug(f"Reusing cached index: {index_name}")
-            return PineconePool._indices[index_name]
-
-        with self._lock:
-            if index_name not in PineconePool._indices:
-                try:
-                    logger.info(f"Getting index: {index_name}")
-                    client = self.get_client()
-                    
-                    # Create index if it doesn't exist
-                    if index_name not in client.list_indexes().names():
-                        logger.info(f"Creating new index: {index_name}")
-                        client.create_index(
-                            name=index_name,
-                            dimension=Config.PINECONE_DIMENSION,
-                            metric="cosine",
-                            spec=ServerlessSpec(cloud="aws", region=Config.PINECONE_REGION)
-                        )
-                        # Wait for index to be ready
-                        time.sleep(5)
-                    
-                    PineconePool._indices[index_name] = client.Index(index_name)
-                    self.health_checker.mark_check(True)
-                except PineconeException as e:
-                    logger.error(f"Pinecone error getting index {index_name}: {str(e)}")
-                    self.health_checker.mark_check(False)
-                    raise
-                except Exception as e:
-                    logger.error(f"Failed to get index {index_name}: {str(e)}")
-                    raise
-
-        return PineconePool._indices[index_name]
-
-    @classmethod
-    def clear_cache(cls):
-        """Clear cached indices."""
-        cls._indices.clear()
-        cls._client = None
-        logger.info("Pinecone cache cleared")
-
-
-_pinecone_pool = PineconePool()
-
-
-def get_pinecone_client() -> Pinecone:
-    """Get Pinecone client from pool."""
-    return _pinecone_pool.get_client()
-
-
-def get_pinecone_index(index_name: str = None):
-    """Get Pinecone index from pool."""
-    return _pinecone_pool.get_index(index_name=index_name)
-
-
-# ============================================================
-# Vectorstore Configuration
-# ============================================================
-
-class VectorstorePool:
-    """Managed Vectorstore instances with lazy initialization."""
-
-    _instance = None
-    _lock = threading.Lock()
-    _stores = {}
-
-    def __new__(cls):
-        if cls._instance is None:
-            with cls._lock:
-                if cls._instance is None:
-                    cls._instance = super().__new__(cls)
-                    cls._instance._initialized = False
-        return cls._instance
-
-    def __init__(self):
-        if self._initialized:
-            return
-        self._lock = threading.Lock()
-        self._initialized = True
-        logger.info("VectorstorePool initialized")
-
-    def get_vectorstore(self, index_name: str = None) -> PineconeVectorStore:
-        """Get or create vectorstore instance."""
-        index_name = index_name or Config.PINECONE_INDEX_NAME
-
-        if index_name in VectorstorePool._stores:
-            logger.debug(f"Reusing cached vectorstore: {index_name}")
-            return VectorstorePool._stores[index_name]
-
-        with self._lock:
-            if index_name not in VectorstorePool._stores:
-                try:
-                    logger.info(f"Creating vectorstore for index: {index_name}")
-                    idx = get_pinecone_index(index_name)
-                    emb = get_embedding_model()
-                    
-                    VectorstorePool._stores[index_name] = PineconeVectorStore(
-                        index=idx,
-                        embedding=emb,
-                        text_key="text"
-                    )
-                except Exception as e:
-                    logger.error(f"Failed to create vectorstore for {index_name}: {str(e)}")
-                    raise
-
-        return VectorstorePool._stores[index_name]
-
-    @classmethod
-    def clear_cache(cls):
-        """Clear all cached vectorstores."""
-        cls._stores.clear()
-        logger.info("Vectorstore cache cleared")
-
-
-_vectorstore_pool = VectorstorePool()
-
-
-def get_vectorstore(index_name: str = None) -> PineconeVectorStore:
-    """Get vectorstore instance from pool."""
-    return _vectorstore_pool.get_vectorstore(index_name=index_name)
-
-
-# Lazy-loaded default vectorstore instance
-_vectorstore_instance = None
-
-
-def get_default_vectorstore() -> PineconeVectorStore:
-    """Get or create the default vectorstore instance (lazy-loaded at first use)."""
-    global _vectorstore_instance
-    if _vectorstore_instance is None:
-        _vectorstore_instance = get_vectorstore()
-    return _vectorstore_instance
+# ── Pinecone removed ──────────────────────────────────────────────────────────
+# Vector retrieval now uses Supabase pgvector exclusively.
+# See src/rag/retriever.py for all product search logic.
+# ─────────────────────────────────────────────────────────────────────────────
 
 
 # ============================================================
@@ -543,21 +363,6 @@ def shutdown_all() -> None:
     PineconePool.clear_cache()
     VectorstorePool.clear_cache()
     logger.info("All connections shut down")
-
-
-# ============================================================
-# Public API (backward compatible)
-# ============================================================
-
-def load_vectorstore() -> PineconeVectorStore:
-    """Public API to get vectorstore instance."""
-    return get_vectorstore()
-
-
-def refresh_vectorstore(index_name: str = None) -> PineconeVectorStore:
-    """Force refresh vectorstore connection."""
-    VectorstorePool.clear_cache()
-    return get_vectorstore(index_name=index_name)
 
 
 # Initialize on import

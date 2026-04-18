@@ -50,7 +50,7 @@ class PreferencesResponse(BaseModel):
 # ── Chat ──────────────────────────────────────────────────────────────────────
 
 class ChatRequest(BaseModel):
-    user_input: str
+    user_input: str = Field(..., min_length=1, max_length=2000, strip_whitespace=True)
     session_id: Optional[str] = None
     image_url: Optional[str] = None
 

@@ -142,9 +142,14 @@ async def order_management_agent(state: CoffeeAgentState, config: RunnableConfig
                 order_id = None
                 if user_id != "anonymous":
                     order_id = confirm_order(user_id, existing_order, state.final_price)
-                    # Trigger beautiful email receipt
+                    # Fire-and-forget email receipt — failures logged, never crash order
                     import asyncio
-                    asyncio.create_task(send_order_receipt(user_id, existing_order, state.final_price, order_id))
+                    async def _safe_send_receipt():
+                        try:
+                            await send_order_receipt(user_id, existing_order, state.final_price, order_id)
+                        except Exception as mail_err:
+                            logger.error(f"Email receipt failed for order {order_id}: {mail_err}")
+                    asyncio.ensure_future(_safe_send_receipt())
                 
                 receipt = _mock_receipt(existing_order, state.final_price, order_id)
                 msg = await _generate_dynamic_response(

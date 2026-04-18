@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     llm_timeout_seconds: int = 30
 
     # ── Embeddings ────────────────────────────────────────────────────────────
-    embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
+    embedding_model: str = "BAAI/bge-base-en-v1.5"  # must match pgvector index dimension (768)
     hf_api_key: str = ""
 
     # ── Pinecone (DEPRECATED: Using Supabase pgvector) ──────────────────────
@@ -92,12 +92,14 @@ class Settings(BaseSettings):
         """Raise if critical keys are missing."""
         missing = [
             name for name, val in {
-                "OPENROUTER_API_KEY": self.openrouter_api_key,
                 "HF_API_KEY": self.hf_api_key,
                 "SUPABASE_URL": self.supabase_url,
                 "SUPABASE_KEY": self.supabase_key,
             }.items() if not val
         ]
+        # Require at least one LLM provider
+        if not self.groq_api_key and not self.openrouter_api_key:
+            missing.append("GROQ_API_KEY (or OPENROUTER_API_KEY as fallback)")
         if missing:
             raise ValueError(f"Missing required env vars: {', '.join(missing)}")
 

@@ -109,11 +109,17 @@ export const chatAPI = {
     const token = getToken();
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s hard timeout
+
     const res = await fetch(`${BASE_URL}/chat/stream`, {
       method: "POST",
       headers,
       body: JSON.stringify(body),
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     if (!res.ok) {
       throw new Error("Stream request failed");

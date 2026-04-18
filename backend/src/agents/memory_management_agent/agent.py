@@ -49,11 +49,6 @@ async def memory_agent(state: CoffeeAgentState, config: RunnableConfig) -> Comma
             logger.info(f"Memory Agent Reasoning: {intent.reasoning}")
 
         if not intent.has_updates():
-            # --- MEM0 INTEGRATION: Silent Background Update ---
-            if user_id != "anonymous" and state.user_input:
-                from src.memory.mem0_manager import mem0_manager
-                mem0_manager.add_memory(state.user_input, user_id=user_id)
-            # ------------------------------------------------
             return Command(goto="router")
 
         # Trigger HITL before applying
@@ -77,14 +72,14 @@ async def memory_agent(state: CoffeeAgentState, config: RunnableConfig) -> Comma
         if intent.replace:
             memory = replace_in_memory(intent.replace, memory)
 
-        # Persist to Supabase and Mem0
+        # Persist to Supabase and Mem0 (only when meaningful preferences were detected)
         if user_id != "anonymous":
             save_user_memory(user_id, memory)
-            
+
             # --- MEM0 INTEGRATION: Add to semantic memory (after approval) ---
             from src.memory.mem0_manager import mem0_manager
             mem0_manager.add_memory(state.user_input, user_id=user_id)
-            # ------------------------------------------------
+            # ----------------------------------------------------------------
         else:
             logger.debug("Skipping Supabase save — no user_id in config")
 
