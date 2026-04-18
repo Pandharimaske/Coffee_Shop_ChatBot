@@ -3,11 +3,9 @@ from api.auth import CurrentUser
 from api.schemas import UserResponse, PreferencesRequest, PreferencesResponse
 from src.memory.memory_manager import get_user_memory, save_user_memory
 from src.memory.schemas import UserMemory
+from src.memory.supabase_client import supabase_admin
 
 router = APIRouter(prefix="/user", tags=["user"])
-
-
-from src.memory.supabase_client import supabase, supabase_admin
 
 @router.get("/me", response_model=UserResponse)
 async def get_me(current_user: CurrentUser):

@@ -1,19 +1,32 @@
 import uuid
 import json
+import logging
 from fastapi import APIRouter, HTTPException, UploadFile, File
 from fastapi.responses import StreamingResponse
 from api.auth import CurrentUser
 from api.schemas import ChatRequest, ChatResponse, MessageHistoryResponse, ResumeRequest
-from pydantic import BaseModel
 from langgraph.types import Command
 from src.graph.graph import build_coffee_shop_graph
 from src.graph.state import CoffeeAgentState
 from src.memory.memory_manager import get_user_memory
+from src.memory.schemas import UserMemory
 from src.orders import get_active_order
 from src.sessions import get_or_create_session, load_messages, save_messages, append_message, append_messages
 from src.memory.supabase_client import supabase_admin
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/chat", tags=["chat"])
+
+# Error messages that should NOT be persisted to chat history
+_ERROR_FALLBACKS = {
+    "I'm having a little trouble. Can we stick to coffee orders for now?",
+    "Sorry, I'm having trouble understanding your request right now. Could you please try again?",
+    "I'm having trouble retrieving that information right now. Please try again.",
+    "Hey there! Sorry, I had a small hiccup. How can I help you today?",
+    "Sorry, I had a little trouble with that. Could you try again?",
+    "I'm having trouble updating your order right now. Please try again.",
+}
 
 _graph = build_coffee_shop_graph()
 
@@ -122,17 +135,7 @@ async def chat(body: ChatRequest, current_user: CurrentUser):
             or "Sorry, I had a little trouble with that. Could you try again?"
         )
 
-        # Do not save known fallback errors into the user's conversation history
-        error_fallbacks = [
-            "I'm having a little trouble. Can we stick to coffee orders for now?",
-            "Sorry, I'm having trouble understanding your request right now. Could you please try again?",
-            "I'm having trouble retrieving that information right now. Please try again.",
-            "Hey there! Sorry, I had a small hiccup. How can I help you today?",
-            "Sorry, I had a little trouble with that. Could you try again?",
-            "I'm having trouble updating your order right now. Please try again."
-        ]
-        
-        if response not in error_fallbacks:
+        if response not in _ERROR_FALLBACKS:
             save_messages(session_id, user_email, body.user_input, response)
 
         return ChatResponse(session_id=session_id, response=response)
@@ -235,16 +238,7 @@ async def stream_chat(body: ChatRequest, current_user: CurrentUser):
                 full_response = final_state_msg or "Sorry, I had a little trouble with that. Could you try again?"
                 yield f"data: {json.dumps({'type': 'token', 'content': full_response})}\n\n"
                 
-            error_fallbacks = [
-                "I'm having a little trouble. Can we stick to coffee orders for now?",
-                "Sorry, I'm having trouble understanding your request right now. Could you please try again?",
-                "I'm having trouble retrieving that information right now. Please try again.",
-                "Hey there! Sorry, I had a small hiccup. How can I help you today?",
-                "Sorry, I had a little trouble with that. Could you try again?",
-                "I'm having trouble updating your order right now. Please try again."
-            ]
-            
-            if full_response not in error_fallbacks and full_response.strip():
+            if full_response not in _ERROR_FALLBACKS and full_response.strip():
                 # SAVE FINAL BOT RESPONSE
                 append_message(session_id, user_email, "bot", full_response)
             
