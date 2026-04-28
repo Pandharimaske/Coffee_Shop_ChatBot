@@ -47,23 +47,36 @@ def _get_checkpointer():
 
     # Production (Linux): use persistent Postgres checkpointer
     try:
-        from psycopg_pool import ConnectionPool
+        from psycopg_pool import ConnectionPool, AsyncConnectionPool
         from langgraph.checkpoint.postgres import PostgresSaver
+        from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 
         # Supabase Transaction Pooler (Port 6543) — requires prepare_threshold=0
         separator = "&" if "?" in db_uri else "?"
         full_uri = f"{db_uri}{separator}sslmode=require&tcp_user_timeout=10000"
 
-        pool = ConnectionPool(
+        # 1. Setup tables synchronously using the sync PostgresSaver
+        # We do this because _get_checkpointer is called synchronously
+        # during FastAPI startup, where we cannot easily `await setup()`.
+        with ConnectionPool(
+            conninfo=full_uri,
+            max_size=2,
+            kwargs={"autocommit": True, "prepare_threshold": 0},
+        ) as sync_pool:
+            PostgresSaver(sync_pool).setup()
+
+        # 2. Create the Async checkpointer for the graph runtime
+        # open=False is required here because there is no running async loop
+        # to `await async_pool.open()` yet. It will open on first use.
+        async_pool = AsyncConnectionPool(
             conninfo=full_uri,
             max_size=10,
-            open=True,
+            open=False,
             kwargs={"autocommit": True, "prepare_threshold": 0},
         )
-        saver = PostgresSaver(pool)
-        saver.setup()
-        _checkpointer = saver
-        log.info("PostgresSaver checkpointer initialised via Supabase Transaction Pooler")
+        
+        _checkpointer = AsyncPostgresSaver(async_pool)
+        log.info("AsyncPostgresSaver checkpointer initialised via Supabase Transaction Pooler")
     except Exception as e:
         log.warning(f"PostgresSaver failed, falling back to MemorySaver: {e}")
         from langgraph.checkpoint.memory import MemorySaver
